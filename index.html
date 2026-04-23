@@ -1090,8 +1090,8 @@
 // 1. Import and Config
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
   
-  const supabaseUrl = 'https://your-project-id.supabase.co'
-  const supabaseKey = 'your-public-anon-key'
+  const supabaseUrl = 'https://dnfcocbwjrlbvmpazppc.supabase.co'
+  const supabaseKey = 'sb_publishable_iyMoqpuYk7k5iAPn7xBRwg_wKh0nUfW'
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   // 2. Global State
@@ -1103,12 +1103,49 @@
   let showGifPicker = false;
 
   // 3. Make functions accessible to HTML buttons
-window.register = register;
-window.login = login;
-window.logout = logout;
 window.showPage = showPage;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.register = register;
+window.login = login;
+window.logout = logout;
+window.showAppPage = showAppPage;
+window.switchSidebar = switchSidebar;
+window.filterMembers = filterMembers;
+window.switchConnectTab = switchConnectTab;
+window.sendMessage = sendMessage;
+
+  async function register() {
+  const fname = document.getElementById('reg-fname').value;
+  const lname = document.getElementById('reg-lname').value;
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-pass').value;
+  const phone = document.getElementById('reg-phone').value;
+
+  if (!email || !password || !fname) {
+    toast('⚠️ Email, Password, and First Name are required');
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password,
+    options: {
+      data: { 
+        first_name: fname, 
+        last_name: lname, 
+        phone: phone 
+      }
+    }
+  });
+
+  if (error) {
+    toast('❌ ' + error.message);
+  } else {
+    toast('✅ Success! Check your email to confirm.');
+    closeModal('registerModal');
+  }
+}
 // REPLACE 'isRegistered' with this:
 async function isRegistered(email) {
   if (!email) return false;
@@ -1226,20 +1263,48 @@ async function register() {
   }
 }  
 
-function login() {
-  const phone = document.getElementById('login-phone').value.trim();
-  if (!phone) { toast('⚠️ Enter your phone number'); return; }
-  // Demo: accept any phone
-  const known = registeredUsers[phone];
-  const name = known ? known.name : 'Family Member';
-  const initials = known ? known.initials : getInitials(name);
-  currentUser = { name, initials, phone, email: known ? known.email : '' };
-  members = [
-    { id: 1, name: 'Ramesh Kumar', rel: 'Father', phone: '+91 99001 12233', email: 'ramesh@email.com', city: 'Hyderabad', registered: true },
-    { id: 2, name: 'Savitha Kumar', rel: 'Mother', phone: '+91 77889 90011', email: '', city: 'Hyderabad', registered: true },
-    { id: 3, name: 'Anjali Kumar', rel: 'Sister', phone: '+91 88990 11223', email: '', city: 'Bengaluru', registered: false },
-    { id: 4, name: 'Vikram Reddy', rel: 'Friend', phone: '', email: '', city: '', registered: false },
-  ];
+async function login() {
+  const email = document.getElementById('login-phone').value.trim(); // We treat this as email now
+  const password = document.getElementById('login-pass').value;
+
+  if (!email || !password) {
+    toast('⚠️ Please enter both email and password');
+    return;
+  }
+
+  // 1. Authenticate with Supabase
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: password,
+  });
+
+  if (error) {
+    toast('❌ ' + error.message);
+  } else {
+    // 2. If successful, get the user details
+    const user = data.user;
+    currentUser = {
+      name: user.user_metadata.first_name + " " + user.user_metadata.last_name,
+      initials: user.user_metadata.first_name[0],
+      email: user.email
+    };
+
+    // 3. Fetch their actual family members from your 'members' table
+    const { data: dbMembers } = await supabase
+      .from('members')
+      .select('*');
+
+    members = dbMembers || [];
+
+    toast('👋 Welcome back!');
+    closeModal('loginModal');
+    showAppPage('tree');
+    
+    // Refresh UI with real data
+    renderProfile();
+    renderTreeSVG();
+  }
+}
   conversations = {};
   afterLogin();
   closeModal('loginModal');
