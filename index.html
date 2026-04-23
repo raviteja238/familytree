@@ -1115,218 +1115,150 @@ window.filterMembers = filterMembers;
 window.switchConnectTab = switchConnectTab;
 window.sendMessage = sendMessage;
 
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+
+  const relColors = {
+    'Father': '#5C3D2E', 'Mother': '#C4736A', 'Brother': '#3A6B35', 'Sister': '#6BA363',
+    'Son': '#2C5F8A', 'Daughter': '#5B92C0', 'Spouse': '#C8900A',
+    'Friend': '#9B59B6', 'Best Friend': '#8E44AD', 'default': '#8B6150'
+  };
+  const avatarColors = ['avatar-bark','avatar-leaf','avatar-sky','avatar-gold','avatar-blush'];
+
+  // 3. INITIALIZATION
+  async function initApp() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      currentUser = {
+        id: user.id,
+        email: user.email,
+        name: `${user.user_metadata.first_name} ${user.user_metadata.last_name}`,
+        initials: user.user_metadata.first_name[0]
+      };
+      updateUIForAuth();
+      await loadMembers();
+    }
+  }
+
+  // 4. AUTHENTICATION FUNCTIONS
   async function register() {
-  const fname = document.getElementById('reg-fname').value;
-  const lname = document.getElementById('reg-lname').value;
-  const email = document.getElementById('reg-email').value;
-  const password = document.getElementById('reg-pass').value;
-  const phone = document.getElementById('reg-phone').value;
+    const fname = document.getElementById('reg-fname').value.trim();
+    const lname = document.getElementById('reg-lname').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-pass').value;
+    const phone = document.getElementById('reg-phone').value.trim();
 
-  if (!email || !password || !fname) {
-    toast('⚠️ Email, Password, and First Name are required');
-    return;
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password,
-    options: {
-      data: { 
-        first_name: fname, 
-        last_name: lname, 
-        phone: phone 
-      }
+    if (!email || !password || !fname) {
+      toast('⚠️ Fill in all required fields');
+      return;
     }
-  });
 
-  if (error) {
-    toast('❌ ' + error.message);
-  } else {
-    toast('✅ Success! Check your email to confirm.');
-    closeModal('registerModal');
-  }
-}
-// REPLACE 'isRegistered' with this:
-async function isRegistered(email) {
-  if (!email) return false;
-  const { data } = await supabase
-    .from('profiles') // Assuming you created a 'profiles' table
-    .select('id')
-    .eq('email', email)
-    .single();
-  
-  return !!data;
-}  
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { first_name: fname, last_name: lname, phone: phone } }
+    });
 
-// REPLACE 'getRegisteredUser' with this:
-async function getRegisteredUser(email) {
-  if (!email) return null;
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('email', email)
-    .single();
-    
-  return data || null;
-}
-
-// Relation type colors
-const relColors = {
-  'Father': '#5C3D2E', 'Mother': '#C4736A', 'Brother': '#3A6B35', 'Sister': '#6BA363',
-  'Son': '#2C5F8A', 'Daughter': '#5B92C0', 'Spouse': '#C8900A',
-  'Friend': '#9B59B6', 'Best Friend': '#8E44AD',
-  'default': '#8B6150'
-};
-
-const avatarColors = ['avatar-bark','avatar-leaf','avatar-sky','avatar-gold','avatar-blush'];
-
-function getInitials(name) {
-  return name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-}
-function getAvatarColor(i) { return avatarColors[i % avatarColors.length]; }
-function getRelColor(rel) { return relColors[rel] || relColors.default; }
-
-
-
-// ====== MODALS ======
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-  if (id === 'newChatModal') renderChatableMembers();
-}
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
-
-// ====== TOAST ======
-function toast(msg, dur = 2800) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), dur);
-}
-
-// ====== PAGES ======
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-}
-
-function showAppPage(view) {
-  showPage('app');
-  document.querySelectorAll('[id^="app"]').forEach(el => el.style.display = 'none');
-  document.getElementById('app' + view.charAt(0).toUpperCase() + view.slice(1)).style.display = 'block';
-  if (view === 'tree') renderTree();
-  if (view === 'chat') renderChatList();
-  if (view === 'connect') renderSuggestions();
-  if (view === 'profile') renderProfile();
-}
-
-function switchSidebar(el, viewId) {
-  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('treeView').style.display = viewId === 'treeView' ? 'block' : 'none';
-  document.getElementById('membersView').style.display = viewId === 'membersView' ? 'block' : 'none';
-  if (viewId === 'membersView') renderMembersGrid(members);
-}
-
-// ====== AUTH ======
-async function register() {
-  const fname = document.getElementById('reg-fname').value;
-  const lname = document.getElementById('reg-lname').value;
-  const email = document.getElementById('reg-email').value;
-  const password = document.getElementById('reg-pass').value;
-  const phone = document.getElementById('reg-phone').value;
-
-  if (!email || !password || !fname) {
-    toast('⚠️ Please fill in all required fields');
-    return;
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password,
-    options: {
-      data: { 
-        first_name: fname, 
-        last_name: lname, 
-        phone: phone 
-      }
+    if (error) toast('❌ ' + error.message);
+    else {
+      toast('✅ Check your email to confirm!');
+      closeModal('registerModal');
     }
-  });
-
-  if (error) {
-    toast('❌ ' + error.message);
-  } else {
-    toast('✅ Success! Please check your email to confirm.');
-    closeModal('registerModal');
-  }
-}  
-
-async function login() {
-  const email = document.getElementById('login-phone').value.trim(); // We treat this as email now
-  const password = document.getElementById('login-pass').value;
-
-  if (!email || !password) {
-    toast('⚠️ Please enter both email and password');
-    return;
   }
 
-  // 1. Authenticate with Supabase
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password,
-  });
+  async function login() {
+    const email = document.getElementById('login-phone').value.trim();
+    const password = document.getElementById('login-pass').value;
 
-  if (error) {
-    toast('❌ ' + error.message);
-  } else {
-    // 2. If successful, get the user details
-    const user = data.user;
-    currentUser = {
-      name: user.user_metadata.first_name + " " + user.user_metadata.last_name,
-      initials: user.user_metadata.first_name[0],
-      email: user.email
-    };
+    if (!email || !password) {
+      toast('⚠️ Enter email and password');
+      return;
+    }
 
-    // 3. Fetch their actual family members from your 'members' table
-    const { data: dbMembers } = await supabase
-      .from('members')
-      .select('*');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    members = dbMembers || [];
+    if (error) toast('❌ ' + error.message);
+    else {
+      toast('👋 Welcome back!');
+      closeModal('loginModal');
+      location.reload(); 
+    }
+  }
 
-    toast('👋 Welcome back!');
-    closeModal('loginModal');
+  async function logout() {
+    await supabase.auth.signOut();
+    location.reload();
+  }
+
+  // 5. DATA FUNCTIONS
+  async function loadMembers() {
+    const { data, error } = await supabase.from('members').select('*');
+    if (!error && data) {
+      members = data.map(m => ({
+        id: m.id,
+        name: m.full_name,
+        relation: m.relationship,
+        phone: m.phone,
+        avatar: m.full_name[0]
+      }));
+      renderTreeSVG();
+      renderMembersList();
+    }
+  }
+
+  async function addMember() {
+    const name = document.getElementById('add-name').value.trim();
+    const rel = document.getElementById('add-rel').value;
+    const phone = document.getElementById('add-phone').value.trim();
+
+    if (!name) { toast('⚠️ Name is required'); return; }
+
+    const { error } = await supabase.from('members').insert([
+      { full_name: name, relationship: rel, phone: phone }
+    ]);
+
+    if (error) toast('❌ Error adding member');
+    else {
+      toast('✅ Member added');
+      closeModal('addMemberModal');
+      await loadMembers();
+    }
+  }
+
+  // 6. UI HELPERS
+  function updateUIForAuth() {
+    document.getElementById('navLinks').style.display = 'none';
+    document.getElementById('navLinksAuth').style.display = 'flex';
+    document.getElementById('sidebarName').textContent = currentUser.name;
+    document.getElementById('sidebarAvatar').textContent = currentUser.initials;
     showAppPage('tree');
-    
-    // Refresh UI with real data
-    renderProfile();
-    renderTreeSVG();
   }
-}
-  conversations = {};
-  afterLogin();
-  closeModal('loginModal');
-  toast('👋 Welcome back, ' + currentUser.name + '!');
-}
 
-function afterLogin() {
-  document.getElementById('navLinks').style.display = 'none';
-  document.getElementById('navLinksAuth').style.display = 'flex';
-  document.getElementById('sidebarName').textContent = currentUser.name;
-  document.getElementById('sidebarAvatar').textContent = currentUser.initials;
-  showAppPage('tree');
-}
+  function getInitials(name) {
+    return name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+  }
+  function getAvatarColor(i) { return avatarColors[i % avatarColors.length]; }
+  function getRelColor(rel) { return relColors[rel] || relColors.default; }
 
-function logout() {
-  currentUser = null;
-  members = [];
-  document.getElementById('navLinks').style.display = 'flex';
-  document.getElementById('navLinksAuth').style.display = 'none';
-  showPage('home');
-  toast('You have been signed out');
-}
+  // 7. EXPOSE TO WINDOW (Crucial for HTML onclick)
+  window.register = register;
+  window.login = login;
+  window.logout = logout;
+  window.addMember = addMember;
+  window.showPage = (id) => { 
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  };
+  window.openModal = (id) => document.getElementById(id).style.display = 'flex';
+  window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+  window.showAppPage = (id) => {
+    document.querySelectorAll('.app-page').forEach(p => p.style.display = 'none');
+    document.getElementById(id + 'Page').style.display = 'block';
+  };
+
+  // Run on load
+  initApp();
 
 // ====== ADD NODE ======
 function addNode() {
