@@ -1086,22 +1086,61 @@
   <div class="modal" id="memberDetailContent"></div>
 </div>
 
-<script>
-// ====== STATE ======
-let currentUser = null;
-let members = [];
-let conversations = {};
-let activeChatMemberId = null;
-let pendingMedia = [];
-let showGifPicker = false;
+<script type="module">
+// 1. Import and Config
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+  
+  const supabaseUrl = 'https://your-project-id.supabase.co'
+  const supabaseKey = 'your-public-anon-key'
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
-// Registered mock users (phone-indexed)
-const registeredUsers = {
-  '+91 98765 43210': { name: 'Arjun Kumar', email: 'arjun@email.com', id: 'u1', initials: 'AK' },
-  '+91 99001 12233': { name: 'Priya Sharma', email: 'priya@email.com', id: 'u2', initials: 'PS' },
-  '+91 77889 90011': { name: 'Ravi Kumar', email: 'ravi@email.com', id: 'u3', initials: 'RK' },
-  '+91 88990 11223': { name: 'Sunita Devi', email: 'sunita@email.com', id: 'u4', initials: 'SD' },
-};
+  // 2. Global State
+  let currentUser = null;
+  let members = []; // Will be fetched from DB
+  let conversations = {};
+  let activeChatMemberId = null;
+  let pendingMedia = [];
+  let showGifPicker = false;
+
+  // 3. Make functions accessible to HTML buttons
+  window.register = register;
+  window.login = login;
+  window.logout = logout;
+  window.initApp = initApp;
+// REPLACE 'isRegistered' with this:
+async function isRegistered(email) {
+  if (!email) return false;
+  // This checks if a profile exists in your 'profiles' table for this email
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single();
+  
+  return !!data; // returns true if user exists, false if not
+}
+
+// REPLACE 'getRegisteredUser' with this:
+async function getRegisteredUser(email) {
+  if (!email) return null;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('email', email)
+    .single();
+    
+  return data || null;
+}
+
+async function isRegistered(email) {
+  const { data } = await supabase.from('profiles').select('id').eq('email', email).single();
+  return !!data;
+}
+
+async function getRegisteredUser(email) {
+  const { data } = await supabase.from('profiles').select('*').eq('email', email).single();
+  return data;
+}
 
 // Relation type colors
 const relColors = {
@@ -1118,19 +1157,8 @@ function getInitials(name) {
 }
 function getAvatarColor(i) { return avatarColors[i % avatarColors.length]; }
 function getRelColor(rel) { return relColors[rel] || relColors.default; }
-function isRegistered(phone) {
-  if (!phone) return false;
-  const clean = phone.replace(/\s/g,'');
-  return Object.keys(registeredUsers).some(k => k.replace(/\s/g,'') === clean);
-}
-function getRegisteredUser(phone) {
-  if (!phone) return null;
-  const clean = phone.replace(/\s/g,'');
-  for (let k of Object.keys(registeredUsers)) {
-    if (k.replace(/\s/g,'') === clean) return registeredUsers[k];
-  }
-  return null;
-}
+
+
 
 // ====== MODALS ======
 function openModal(id) {
