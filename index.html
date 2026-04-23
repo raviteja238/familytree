@@ -729,11 +729,11 @@
     <button class="nav-btn primary" onclick="openModal('registerModal')">Register</button>
   </div>
   <div class="nav-links" id="navLinksAuth" style="display:none">
-    <button class="nav-btn" id="navTree" onclick="showAppPage('tree')">🌳 Tree</button>
-    <button class="nav-btn" id="navChat" onclick="showAppPage('chat')">💬 Chat <span class="notif-badge">2</span></button>
-    <button class="nav-btn" id="navConnect" onclick="showAppPage('connect')">🤝 Connect</button>
-    <button class="nav-btn" id="navProfile" onclick="showAppPage('profile')">👤 Profile</button>
-    <button class="nav-btn" onclick="logout()">Sign Out</button>
+    <button class="nav-btn" id="navTree" onclick="window.showAppPage('tree')">🌳 Tree</button>
+    <button class="nav-btn" id="navChat" onclick="window.showAppPage('chat')">💬 Chat <span class="notif-badge">2</span></button>
+    <button class="nav-btn" id="navConnect" onclick="window.showAppPage('connect')">🤝 Connect</button>
+    <button class="nav-btn" id="navProfile" onclick="window.showAppPage('profile')">👤 Profile</button>
+    <button class="nav-btn" onclick="window.logout()">Sign Out</button>
   </div>
 </nav>
 
@@ -747,8 +747,8 @@
     <h1>Your Family Story,<br><em>Connected Forever</em></h1>
     <p>Build your family tree, keep in touch, share memories and stay connected with every branch of your family — wherever they are.</p>
     <div class="hero-btns">
-      <button class="btn btn-primary" onclick="openModal('registerModal')">🌱 Start Your Tree</button>
-      <button class="btn btn-outline" onclick="openModal('loginModal')">Sign In</button>
+      <button class="btn btn-primary" onclick="window.openModal('registerModal')">🌱 Start Your Tree</button>
+      <button class="btn btn-outline" onclick="window.openModal('loginModal')">Sign In</button>
     </div>
   </div>
   <div class="features-row">
@@ -800,19 +800,19 @@
           </div>
         </div>
         <div class="sidebar-section">Navigation</div>
-        <button class="sidebar-item active" onclick="switchSidebar(this,'treeView')"><span class="ico">🌳</span> Family Tree</button>
-        <button class="sidebar-item" onclick="switchSidebar(this,'membersView')"><span class="ico">👥</span> All Members</button>
+        <button class="sidebar-item active" onclick="window.switchSidebar(this,'treeView')"><span class="ico">🌳</span> Family Tree</button>
+        <button class="sidebar-item" onclick="window.switchSidebar(this,'membersView')"><span class="ico">👥</span> All Members</button>
         <div class="sidebar-section">Actions</div>
-        <button class="sidebar-item" onclick="openModal('addNodeModal')"><span class="ico">➕</span> Add Family Member</button>
-        <button class="sidebar-item" onclick="showAppPage('chat')"><span class="ico">💬</span> Messages</button>
-        <button class="sidebar-item" onclick="showAppPage('connect')"><span class="ico">🤝</span> Suggestions</button>
+        <button class="sidebar-item" onclick="window.openModal('addNodeModal')"><span class="ico">➕</span> Add Family Member</button>
+        <button class="sidebar-item" onclick="window.showAppPage('chat')"><span class="ico">💬</span> Messages</button>
+        <button class="sidebar-item" onclick="window.showAppPage('connect')"><span class="ico">🤝</span> Suggestions</button>
       </aside>
       <main class="main-content">
         <div id="treeView">
           <div class="tree-toolbar">
             <h2>Family Tree</h2>
             <div style="display:flex;gap:10px">
-              <button class="btn btn-sm btn-outline" onclick="openModal('addNodeModal')">+ Add Member</button>
+              <button class="btn btn-sm btn-outline" onclick="window.openModal('addNodeModal')">+ Add Member</button>
               <button class="btn btn-sm btn-leaf">🌳 View Full Tree</button>
             </div>
           </div>
@@ -834,10 +834,10 @@
             <button class="btn btn-sm btn-outline" onclick="openModal('addNodeModal')">+ Add Member</button>
           </div>
           <div class="tabs">
-            <button class="tab active" onclick="filterMembers('all',this)">All</button>
-            <button class="tab" onclick="filterMembers('family',this)">Family</button>
-            <button class="tab" onclick="filterMembers('friend',this)">Friends</button>
-            <button class="tab" onclick="filterMembers('registered',this)">Registered</button>
+            <button class="tab active" onclick="window.filterMembers('all',this)">All</button>
+            <button class="tab" onclick="window.filterMembers('family',this)">Family</button>
+            <button class="tab" onclick="window.filterMembers('friend',this)">Friends</button>
+            <button class="tab" onclick="window.filterMembers('registered',this)">Registered</button>
           </div>
           <div class="members-grid" id="membersGrid"></div>
         </div>
@@ -851,7 +851,7 @@
       <div class="chat-list">
         <div class="chat-list-header">
           <h3>Messages</h3>
-          <button class="btn btn-sm btn-leaf" style="padding:6px 14px" onclick="openModal('newChatModal')">+</button>
+          <button class="btn btn-sm btn-leaf" style="padding:6px 14px" onclick="window.openModal('newChatModal')">+</button>
         </div>
         <div class="chat-search">
           <input type="text" placeholder="Search conversations..." oninput="filterChats(this.value)">
@@ -874,8 +874,8 @@
       <h2 style="font-family:'Playfair Display',serif;color:var(--bark);font-size:1.6rem;margin-bottom:0.4rem">Connect & Discover</h2>
       <p style="color:var(--text-soft);margin-bottom:1.5rem">Suggested people to add to your family network</p>
       <div class="tabs">
-        <button class="tab active" onclick="switchConnectTab('suggestions',this)">Suggestions</button>
-        <button class="tab" onclick="switchConnectTab('requests',this)">Requests <span class="notif-badge" style="background:var(--blush)">1</span></button>
+        <button class="tab active" onclick="window.switchConnectTab('suggestions',this)">Suggestions</button>
+        <button class="tab" onclick="window.switchConnectTab('requests',this)">Requests <span class="notif-badge" style="background:var(--blush)">1</span></button>
       </div>
       <div id="suggestionsView">
         <div class="suggestions-grid" id="suggestionsGrid"></div>
@@ -908,7 +908,7 @@
         </div>
       </div>
       <div style="margin-top:1.5rem">
-        <button class="btn btn-outline" onclick="openModal('editProfileModal')">✏️ Edit Profile</button>
+        <button class="btn btn-outline" onclick="window.openModal('editProfileModal')">✏️ Edit Profile</button>
       </div>
     </div>
   </div>
@@ -949,11 +949,11 @@
     </div>
     <div class="or-divider">Already have an account?</div>
     <div style="text-align:center;margin-bottom:1rem">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('registerModal');openModal('loginModal')">Sign In Instead</button>
+      <button class="btn btn-outline btn-sm" onclick="window.closeModal('registerModal');window.openModal('loginModal')">Sign In Instead</button>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal('registerModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="register()">Create Account 🌱</button>
+      <button class="btn btn-primary" onclick="window.register()">Create Account 🌱</button>
     </div>
   </div>
 </div>
@@ -973,11 +973,11 @@
     </div>
     <div class="or-divider">New here?</div>
     <div style="text-align:center;margin-bottom:1rem">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('loginModal');openModal('registerModal')">Create an Account</button>
+      <button class="btn btn-outline btn-sm" onclick="window.closeModal('loginModal');window.openModal('registerModal')">Create an Account</button>
     </div>
     <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('loginModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="login()">Sign In →</button>
+      <button class="btn-cancel" onclick="window.closeModal('loginModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="window.login()">Sign In →</button>
     </div>
   </div>
 </div>
@@ -1034,8 +1034,8 @@
       <textarea id="node-about" placeholder="A short note about this person..."></textarea>
     </div>
     <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('addNodeModal')">Cancel</button>
-      <button class="btn btn-leaf" onclick="addNode()">Add to Tree 🌱</button>
+      <button class="btn-cancel" onclick="window.closeModal('addNodeModal')">Cancel</button>
+      <button class="btn btn-leaf" onclick="window.addNode()">Add to Tree 🌱</button>
     </div>
   </div>
 </div>
@@ -1063,8 +1063,8 @@
       <input type="email" id="edit-email">
     </div>
     <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('editProfileModal')">Cancel</button>
-      <button class="btn btn-leaf" onclick="saveProfile()">Save Changes</button>
+      <button class="btn-cancel" onclick="window.closeModal('editProfileModal')">Cancel</button>
+      <button class="btn btn-leaf" onclick="window.saveProfile()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -1076,7 +1076,7 @@
     <p class="sub">Select a registered family member to chat with</p>
     <div id="chatableMembersList"></div>
     <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('newChatModal')">Cancel</button>
+      <button class="btn-cancel" onclick="window.closeModal('newChatModal')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1101,19 +1101,6 @@
   let activeChatMemberId = null;
   let pendingMedia = [];
   let showGifPicker = false;
-
-  // 3. Make functions accessible to HTML buttons
-window.showPage = showPage;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.register = register;
-window.login = login;
-window.logout = logout;
-window.showAppPage = showAppPage;
-window.switchSidebar = switchSidebar;
-window.filterMembers = filterMembers;
-window.switchConnectTab = switchConnectTab;
-window.sendMessage = sendMessage;
 
   const relColors = {
     'Father': '#5C3D2E', 'Mother': '#C4736A', 'Brother': '#3A6B35', 'Sister': '#6BA363',
@@ -1146,7 +1133,7 @@ window.sendMessage = sendMessage;
     const phone = document.getElementById('reg-phone').value.trim();
 
     if (!email || !password || !fname) {
-      toast('⚠️ Fill in all required fields');
+      window.toast('⚠️ Fill in all required fields');
       return;
     }
 
@@ -1156,10 +1143,10 @@ window.sendMessage = sendMessage;
       options: { data: { first_name: fname, last_name: lname, phone: phone } }
     });
 
-    if (error) toast('❌ ' + error.message);
+    if (error) window.toast('❌ ' + error.message);
     else {
-      toast('✅ Check your email to confirm!');
-      closeModal('registerModal');
+      window.toast('✅ Check your email to confirm!');
+      window.closeModal('registerModal');
     }
   }
 
@@ -1168,16 +1155,16 @@ window.sendMessage = sendMessage;
     const password = document.getElementById('login-pass').value;
 
     if (!email || !password) {
-      toast('⚠️ Enter email and password');
+      window.toast('⚠️ Enter email and password');
       return;
     }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) toast('❌ ' + error.message);
+    if (error) window.toast('❌ ' + error.message);
     else {
-      toast('👋 Welcome back!');
-      closeModal('loginModal');
+      window.toast('👋 Welcome back!');
+      window.closeModal('loginModal');
       location.reload(); 
     }
   }
@@ -1228,7 +1215,7 @@ window.sendMessage = sendMessage;
     document.getElementById('navLinksAuth').style.display = 'flex';
     document.getElementById('sidebarName').textContent = currentUser.name;
     document.getElementById('sidebarAvatar').textContent = currentUser.initials;
-    showAppPage('tree');
+    window.showAppPage('tree');
   }
 
   function getInitials(name) {
@@ -1278,6 +1265,12 @@ window.sendMessage = sendMessage;
   window.dismissSuggestion = dismissSuggestion;
   window.selectRelType = selectRelType;
   window.saveProfile = saveProfile;
+  window.filterChats = filterChats;
+  window.renderChatList = renderChatList;
+  window.renderChatableMembers = renderChatableMembers;
+  window.renderSuggestions = renderSuggestions;
+  window.renderProfile = renderProfile;
+  window.renderTree = renderTree;
   window.isRegistered = (phone) => {
     const registeredPhones = ['9876543210', '+91 98765 43210', '9876543211', '9876543212'];
     return registeredPhones.some(p => phone.includes(p.replace(/[^\d]/g, '')));
@@ -1306,14 +1299,14 @@ function isRegistered(phone) {
 function addNode() {
   const name = document.getElementById('node-name').value.trim();
   const rel = document.getElementById('node-rel').value;
-  if (!name || !rel) { toast('⚠️ Name and Relationship are required'); return; }
+  if (!name || !rel) { window.toast('⚠️ Name and Relationship are required'); return; }
   const phone = document.getElementById('node-phone').value.trim();
   const email = document.getElementById('node-email').value.trim();
   const city = document.getElementById('node-city').value.trim();
   const about = document.getElementById('node-about').value.trim();
-  const newM = { id: Date.now(), name, rel, phone, email, city, about, registered: isRegistered(phone) };
+  const newM = { id: Date.now(), name, rel, phone, email, city, about, registered: window.isRegistered(phone) };
   members.push(newM);
-  closeModal('addNodeModal');
+  window.closeModal('addNodeModal');
   document.getElementById('node-name').value = '';
   document.getElementById('node-rel').value = '';
   document.getElementById('node-phone').value = '';
@@ -1455,7 +1448,7 @@ function renderMembersGrid(list) {
       ${m.city ? `<div class="member-detail">📍 ${m.city}</div>` : ''}
       <div class="member-actions">
         <button class="action-btn" onclick="showMemberDetail(members.find(x=>x.id===${m.id}))">View</button>
-        ${m.registered ? `<button class="action-btn chat" onclick="startChat(${m.id})">💬 Chat</button>` : '<button class="action-btn" onclick="toast(\'Member not registered on KinLink yet\')">Invite</button>'}
+        ${m.registered ? `<button class="action-btn chat" onclick="window.startChat(${m.id})">💬 Chat</button>` : '<button class="action-btn" onclick="window.toast(\'Member not registered on KinLink yet\')">Invite</button>'}
       </div>
     </div>
   `).join('');
@@ -1475,8 +1468,8 @@ function showMemberDetail(m) {
     ${m.email ? `<div class="member-detail" style="margin-bottom:8px;font-size:0.9rem">📧 ${m.email}</div>` : ''}
     ${m.about ? `<div style="background:var(--warm-bg);border-radius:10px;padding:12px;font-size:0.88rem;color:var(--text-mid);margin-top:1rem">${m.about}</div>` : ''}
     <div class="modal-footer" style="margin-top:1.5rem">
-      <button class="btn-cancel" onclick="closeModal('memberDetailModal')">Close</button>
-      ${m.registered ? `<button class="btn btn-leaf" onclick="startChat(${m.id});closeModal('memberDetailModal')">💬 Chat Now</button>` : `<button class="btn btn-primary" onclick="toast('Invite link sent to ${m.name}!');closeModal('memberDetailModal')">📨 Invite</button>`}
+      <button class="btn-cancel" onclick="window.closeModal('memberDetailModal')">Close</button>
+      ${m.registered ? `<button class="btn btn-leaf" onclick="window.startChat(${m.id});window.closeModal('memberDetailModal')">💬 Chat Now</button>` : `<button class="btn btn-primary" onclick="window.toast('Invite link sent to ${m.name}!');window.closeModal('memberDetailModal')">📨 Invite</button>`}
     </div>
   `;
   openModal('memberDetailModal');
@@ -1501,7 +1494,7 @@ function renderChatList() {
     const lastMsg = conv.length ? conv[conv.length - 1] : null;
     const unread = conv.filter(msg => msg.type === 'received' && !msg.read).length;
     return `
-      <div class="chat-item ${activeChatMemberId === m.id ? 'active' : ''}" onclick="openChat(${m.id})">
+      <div class="chat-item ${activeChatMemberId === m.id ? 'active' : ''}" onclick="window.openChat(${m.id})">
         <div class="avatar ${getAvatarColor(i)}" style="flex-shrink:0">${getInitials(m.name)}</div>
         <div class="chat-item-info">
           <div class="chat-item-name">${m.name}</div>
@@ -1668,7 +1661,7 @@ function renderChatableMembers() {
     return;
   }
   list.innerHTML = chatables.map((m, i) => `
-    <div class="chat-item" onclick="closeModal('newChatModal');startChat(${m.id})" style="border-radius:12px;margin-bottom:4px">
+    <div class="chat-item" onclick="window.closeModal('newChatModal');window.startChat(${m.id})" style="border-radius:12px;margin-bottom:4px">
       <div class="avatar ${getAvatarColor(i)}">${getInitials(m.name)}</div>
       <div class="chat-item-info">
         <div class="chat-item-name">${m.name}</div>
@@ -1726,7 +1719,7 @@ function renderSuggestions() {
       </div>
       <div class="member-detail">📍 Hyderabad · 2 mutual connections</div>
       <div class="member-actions">
-        <button class="action-btn chat" onclick="toast('✅ Meena Rao added to your tree!');this.closest('.member-card').remove()">Accept</button>
+        <button class="action-btn chat" onclick="window.toast('✅ Meena Rao added to your tree!');this.closest('.member-card').remove()">Accept</button>
         <button class="action-btn" onclick="this.closest('.member-card').remove()">Decline</button>
       </div>
     </div>
@@ -1798,5 +1791,19 @@ function saveProfile() {
   toast('✅ Profile updated!');
 }
 </script>
+
+<script>
+  // Verify functions are available
+  console.log('Functions available:', {
+    openModal: typeof window.openModal,
+    closeModal: typeof window.closeModal,
+    showPage: typeof window.showPage,
+    showAppPage: typeof window.showAppPage,
+    register: typeof window.register,
+    login: typeof window.login,
+    logout: typeof window.logout
+  });
+</script>
+
 </body>
 </html>
