@@ -936,8 +936,8 @@
       <input type="tel" id="reg-phone" placeholder="+91 98765 43210">
     </div>
     <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" id="reg-email" placeholder="arjun@email.com">
+      <label>Email Address <span class="req">*</span></label>
+      <input type="email" id="login-phone" placeholder="your@email.com">
     </div>
     <div class="form-group">
       <label>Password <span class="req">*</span></label>
@@ -1103,22 +1103,23 @@
   let showGifPicker = false;
 
   // 3. Make functions accessible to HTML buttons
-  window.register = register;
-  window.login = login;
-  window.logout = logout;
-  window.initApp = initApp;
+window.register = register;
+window.login = login;
+window.logout = logout;
+window.showPage = showPage;
+window.openModal = openModal;
+window.closeModal = closeModal;
 // REPLACE 'isRegistered' with this:
 async function isRegistered(email) {
   if (!email) return false;
-  // This checks if a profile exists in your 'profiles' table for this email
-  const { data, error } = await supabase
-    .from('profiles')
+  const { data } = await supabase
+    .from('profiles') // Assuming you created a 'profiles' table
     .select('id')
     .eq('email', email)
     .single();
   
-  return !!data; // returns true if user exists, false if not
-}
+  return !!data;
+}  
 
 // REPLACE 'getRegisteredUser' with this:
 async function getRegisteredUser(email) {
@@ -1130,16 +1131,6 @@ async function getRegisteredUser(email) {
     .single();
     
   return data || null;
-}
-
-async function isRegistered(email) {
-  const { data } = await supabase.from('profiles').select('id').eq('email', email).single();
-  return !!data;
-}
-
-async function getRegisteredUser(email) {
-  const { data } = await supabase.from('profiles').select('*').eq('email', email).single();
-  return data;
 }
 
 // Relation type colors
@@ -1203,26 +1194,37 @@ function switchSidebar(el, viewId) {
 }
 
 // ====== AUTH ======
-function register() {
-  const fname = document.getElementById('reg-fname').value.trim();
-  const lname = document.getElementById('reg-lname').value.trim();
-  const phone = document.getElementById('reg-phone').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  if (!fname || !lname || !phone) { toast('⚠️ Please fill required fields'); return; }
-  currentUser = { fname, lname, name: fname + ' ' + lname, phone, email, initials: getInitials(fname + ' ' + lname) };
-  registeredUsers[phone] = { name: currentUser.name, email, id: 'self', initials: currentUser.initials };
-  // seed demo members
-  members = [
-    { id: 1, name: 'Ramesh Kumar', rel: 'Father', phone: '+91 99001 12233', email: 'ramesh@email.com', city: 'Hyderabad', registered: isRegistered('+91 99001 12233') },
-    { id: 2, name: 'Savitha Kumar', rel: 'Mother', phone: '+91 77889 90011', email: 'savitha@email.com', city: 'Hyderabad', registered: isRegistered('+91 77889 90011') },
-    { id: 3, name: 'Anjali Kumar', rel: 'Sister', phone: '+91 88990 11223', email: 'anjali@email.com', city: 'Bengaluru', registered: isRegistered('+91 88990 11223') },
-    { id: 4, name: 'Vikram Reddy', rel: 'Friend', phone: '+91 55667 78899', email: '', city: 'Pune', registered: false },
-  ];
-  conversations = {};
-  afterLogin();
-  closeModal('registerModal');
-  toast('🎉 Welcome to KinLink, ' + fname + '!');
-}
+async function register() {
+  const fname = document.getElementById('reg-fname').value;
+  const lname = document.getElementById('reg-lname').value;
+  const email = document.getElementById('reg-email').value;
+  const password = document.getElementById('reg-pass').value;
+  const phone = document.getElementById('reg-phone').value;
+
+  if (!email || !password || !fname) {
+    toast('⚠️ Please fill in all required fields');
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password,
+    options: {
+      data: { 
+        first_name: fname, 
+        last_name: lname, 
+        phone: phone 
+      }
+    }
+  });
+
+  if (error) {
+    toast('❌ ' + error.message);
+  } else {
+    toast('✅ Success! Please check your email to confirm.');
+    closeModal('registerModal');
+  }
+}  
 
 function login() {
   const phone = document.getElementById('login-phone').value.trim();
