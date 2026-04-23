@@ -937,7 +937,7 @@
     </div>
     <div class="form-group">
       <label>Email Address <span class="req">*</span></label>
-      <input type="email" id="login-phone" placeholder="your@email.com">
+      <input type="email" id="reg-email" placeholder="your@email.com">
     </div>
     <div class="form-group">
       <label>Password <span class="req">*</span></label>
@@ -964,8 +964,8 @@
     <h2>Welcome Back 👋</h2>
     <p class="sub">Sign in to your KinLink account</p>
     <div class="form-group">
-      <label>Phone Number <span class="req">*</span></label>
-      <input type="tel" id="login-phone" placeholder="+91 98765 43210">
+      <label>Email Address <span class="req">*</span></label>
+      <input type="email" id="login-email" placeholder="your@email.com">
     </div>
     <div class="form-group">
       <label>Password <span class="req">*</span></label>
@@ -1087,674 +1087,201 @@
 </div>
 
 <script type="module">
-// 1. Import and Config
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-  
-  const supabaseUrl = 'https://dnfcocbwjrlbvmpazppc.supabase.co'
-  const supabaseKey = 'sb_publishable_iyMoqpuYk7k5iAPn7xBRwg_wKh0nUfW'
-  const supabase = createClient(supabaseUrl, supabaseKey)
+// ============================================================
+// KinLink — Single unified Supabase-wired module
+// ============================================================
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-  // 2. Global State
-  let currentUser = null;
-  let members = []; // Will be fetched from DB
-  let conversations = {};
-  let activeChatMemberId = null;
-  let pendingMedia = [];
-  let showGifPicker = false;
+const supabaseUrl  = 'https://dnfcocbwjrlbvmpazppc.supabase.co';
+const supabaseKey  = 'sb_publishable_iyMoqpuYk7k5iAPn7xBRwg_wKh0nUfW';
+const supabase     = createClient(supabaseUrl, supabaseKey);
 
-  // 3. Make functions accessible to HTML buttons
-window.showPage = showPage;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.register = register;
-window.login = login;
-window.logout = logout;
-window.showAppPage = showAppPage;
-window.switchSidebar = switchSidebar;
-window.filterMembers = filterMembers;
-window.switchConnectTab = switchConnectTab;
-window.sendMessage = sendMessage;
+// ── Global state ─────────────────────────────────────────────
+let currentUser      = null;
+let members          = [];
+let conversations    = {};
+let activeChatMemberId = null;
+let pendingMedia     = [];
+let showGifPicker    = false;
 
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+const relColors = {
+  'Father':'#5C3D2E','Mother':'#C4736A','Brother':'#3A6B35','Sister':'#6BA363',
+  'Son':'#2C5F8A','Daughter':'#5B92C0','Spouse':'#C8900A',
+  'Friend':'#9B59B6','Best Friend':'#8E44AD','default':'#8B6150'
+};
+const avatarColors = ['avatar-bark','avatar-leaf','avatar-sky','avatar-gold','avatar-blush'];
+const friendRels   = ['Friend','Best Friend','Colleague','Neighbor','Childhood Friend'];
 
+// ── Helpers ──────────────────────────────────────────────────
+function getInitials(name='') {
+  return name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+}
+function getAvatarColor(i) { return avatarColors[i % avatarColors.length]; }
+function getRelColor(rel)   { return relColors[rel] || relColors.default; }
 
-  const relColors = {
-    'Father': '#5C3D2E', 'Mother': '#C4736A', 'Brother': '#3A6B35', 'Sister': '#6BA363',
-    'Son': '#2C5F8A', 'Daughter': '#5B92C0', 'Spouse': '#C8900A',
-    'Friend': '#9B59B6', 'Best Friend': '#8E44AD', 'default': '#8B6150'
-  };
-  const avatarColors = ['avatar-bark','avatar-leaf','avatar-sky','avatar-gold','avatar-blush'];
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-  // 3. INITIALIZATION
-  async function initApp() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      currentUser = {
-        id: user.id,
-        email: user.email,
-        name: `${user.user_metadata.first_name} ${user.user_metadata.last_name}`,
-        initials: user.user_metadata.first_name[0]
-      };
-      updateUIForAuth();
-      await loadMembers();
-    }
-  }
+// ── Page / Modal navigation ──────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id)?.classList.add('active');
+}
 
-  // 4. AUTHENTICATION FUNCTIONS
-  async function register() {
-    const fname = document.getElementById('reg-fname').value.trim();
-    const lname = document.getElementById('reg-lname').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-pass').value;
-    const phone = document.getElementById('reg-phone').value.trim();
+function openModal(id)  { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-    if (!email || !password || !fname) {
-      toast('⚠️ Fill in all required fields');
-      return;
-    }
+function showAppPage(section) {
+  // Show the outer app page
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-app').classList.add('active');
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { first_name: fname, last_name: lname, phone: phone } }
-    });
+  // Hide all inner views
+  ['appTree','appChat','appConnect','appProfile'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
 
-    if (error) toast('❌ ' + error.message);
-    else {
-      toast('✅ Check your email to confirm!');
-      closeModal('registerModal');
-    }
-  }
+  // Activate selected
+  const map = { tree:'appTree', chat:'appChat', connect:'appConnect', profile:'appProfile' };
+  const el = document.getElementById(map[section]);
+  if (el) el.style.display = 'block';
 
-  async function login() {
-    const email = document.getElementById('login-phone').value.trim();
-    const password = document.getElementById('login-pass').value;
+  // Update nav highlights
+  document.querySelectorAll('#navLinksAuth .nav-btn').forEach(b => b.classList.remove('active'));
+  const navId = { tree:'navTree', chat:'navChat', connect:'navConnect', profile:'navProfile' };
+  document.getElementById(navId[section])?.classList.add('active');
 
-    if (!email || !password) {
-      toast('⚠️ Enter email and password');
-      return;
-    }
+  // Post-render hooks
+  if (section === 'tree')    { renderTree(); renderMembersGrid(members); }
+  if (section === 'chat')    { renderChatList(); }
+  if (section === 'connect') { renderSuggestions(); }
+  if (section === 'profile') { renderProfile(); }
+}
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+function switchSidebar(el, viewId) {
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  ['treeView','membersView'].forEach(id => {
+    const v = document.getElementById(id);
+    if (v) v.style.display = id === viewId ? 'block' : 'none';
+  });
+  if (viewId === 'treeView')    renderTree();
+  if (viewId === 'membersView') renderMembersGrid(members);
+}
 
-    if (error) toast('❌ ' + error.message);
-    else {
-      toast('👋 Welcome back!');
-      closeModal('loginModal');
-      location.reload(); 
-    }
-  }
-
-  async function logout() {
-    await supabase.auth.signOut();
-    location.reload();
-  }
-
-  // 5. DATA FUNCTIONS
-  async function loadMembers() {
-    const { data, error } = await supabase.from('members').select('*');
-    if (!error && data) {
-      members = data.map(m => ({
-        id: m.id,
-        name: m.full_name,
-        relation: m.relationship,
-        phone: m.phone,
-        avatar: m.full_name[0]
-      }));
-      renderTreeSVG();
-      renderMembersList();
-    }
-  }
-
-  async function addMember() {
-    const name = document.getElementById('add-name').value.trim();
-    const rel = document.getElementById('add-rel').value;
-    const phone = document.getElementById('add-phone').value.trim();
-
-    if (!name) { toast('⚠️ Name is required'); return; }
-
-    const { error } = await supabase.from('members').insert([
-      { full_name: name, relationship: rel, phone: phone }
-    ]);
-
-    if (error) toast('❌ Error adding member');
-    else {
-      toast('✅ Member added');
-      closeModal('addMemberModal');
-      await loadMembers();
-    }
-  }
-
-  // 6. UI HELPERS
-  function updateUIForAuth() {
-    document.getElementById('navLinks').style.display = 'none';
-    document.getElementById('navLinksAuth').style.display = 'flex';
-    document.getElementById('sidebarName').textContent = currentUser.name;
+function updateUIForAuth() {
+  document.getElementById('navLinks').style.display = 'none';
+  document.getElementById('navLinksAuth').style.display = 'flex';
+  if (currentUser) {
+    document.getElementById('sidebarName').textContent  = currentUser.name;
     document.getElementById('sidebarAvatar').textContent = currentUser.initials;
-    showAppPage('tree');
   }
+}
 
-  function getInitials(name) {
-    return name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-  }
-  function getAvatarColor(i) { return avatarColors[i % avatarColors.length]; }
-  function getRelColor(rel) { return relColors[rel] || relColors.default; }
+// ── Auth ─────────────────────────────────────────────────────
+async function register() {
+  const fname    = document.getElementById('reg-fname').value.trim();
+  const lname    = document.getElementById('reg-lname').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-pass').value;
+  const phone    = document.getElementById('reg-phone').value.trim();
 
-  // 7. EXPOSE TO WINDOW (Crucial for HTML onclick)
-  window.register = register;
-  window.login = login;
-  window.logout = logout;
-  window.addMember = addMember;
-  window.showPage = (id) => { 
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  };
-  window.openModal = (id) => document.getElementById(id).style.display = 'flex';
-  window.closeModal = (id) => document.getElementById(id).style.display = 'none';
-  window.showAppPage = (id) => {
-    document.querySelectorAll('.app-page').forEach(p => p.style.display = 'none');
-    document.getElementById(id + 'Page').style.display = 'block';
-  };
+  if (!fname || !email || !password) { toast('⚠️ Fill in all required fields'); return; }
 
-  // Run on load
-  initApp();
+  const { error } = await supabase.auth.signUp({
+    email, password,
+    options: { data: { first_name: fname, last_name: lname, phone } }
+  });
 
-// ====== ADD NODE ======
-function addNode() {
-  const name = document.getElementById('node-name').value.trim();
-  const rel = document.getElementById('node-rel').value;
+  if (error) toast('❌ ' + error.message);
+  else { toast('✅ Account created! Check your email to confirm.'); closeModal('registerModal'); }
+}
+
+async function login() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-pass').value;
+
+  if (!email || !password) { toast('⚠️ Enter email and password'); return; }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) toast('❌ ' + error.message);
+  else { toast('👋 Welcome back!'); closeModal('loginModal'); location.reload(); }
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+// ── Data: members ────────────────────────────────────────────
+async function loadMembers() {
+  const { data, error } = await supabase
+    .from('members')
+    .select('*')
+    .eq('user_id', currentUser.id);
+
+  if (error) { console.error('loadMembers:', error.message); return; }
+
+  members = (data || []).map(m => ({
+    id:         m.id,
+    name:       m.full_name   || '',
+    rel:        m.relationship|| '',
+    phone:      m.phone       || '',
+    email:      m.email       || '',
+    city:       m.city        || '',
+    about:      m.about       || '',
+    dob:        m.dob         || '',
+    registered: m.registered  || false,
+  }));
+
+  renderTree();
+  renderMembersGrid(members);
+  renderChatList();
+}
+
+async function addNode() {
+  const name  = document.getElementById('node-name').value.trim();
+  const rel   = document.getElementById('node-rel').value;
   if (!name || !rel) { toast('⚠️ Name and Relationship are required'); return; }
+
   const phone = document.getElementById('node-phone').value.trim();
   const email = document.getElementById('node-email').value.trim();
-  const city = document.getElementById('node-city').value.trim();
+  const city  = document.getElementById('node-city').value.trim();
   const about = document.getElementById('node-about').value.trim();
-  const newM = { id: Date.now(), name, rel, phone, email, city, about, registered: isRegistered(phone) };
-  members.push(newM);
-  closeModal('addNodeModal');
-  document.getElementById('node-name').value = '';
+  const dob   = document.getElementById('node-dob').value;
+
+  const { data, error } = await supabase.from('members').insert([{
+    user_id: currentUser.id,
+    full_name: name, relationship: rel,
+    phone, email, city, about, dob, registered: false
+  }]).select().single();
+
+  if (error) { toast('❌ ' + error.message); return; }
+
+  members.push({
+    id: data.id, name, rel, phone, email, city, about, dob, registered: false
+  });
+
+  ['node-name','node-phone','node-email','node-city','node-about'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
   document.getElementById('node-rel').value = '';
-  document.getElementById('node-phone').value = '';
-  document.getElementById('node-email').value = '';
-  document.getElementById('node-city').value = '';
-  document.getElementById('node-about').value = '';
+  document.getElementById('node-dob').value = '';
+
+  closeModal('addNodeModal');
   renderTree();
-  if (newM.registered) toast('✅ ' + name + ' added! They are on KinLink — you can chat!');
-  else toast('🌱 ' + name + ' added to your tree!');
+  renderMembersGrid(members);
+  toast('🌱 ' + name + ' added to your tree!');
 }
 
-// ====== FAMILY TREE SVG ======
-function renderTree() {
-  const svg = document.getElementById('treeSvg');
-  svg.innerHTML = '';
-  const W = 700, H = 480;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+// (all functions defined in the module above)
 
-  // Layout: self in center, parents above, siblings right, friends bottom
-  const self = { id: 'self', name: currentUser ? currentUser.name : 'You', rel: 'Self', x: 350, y: 240 };
-  const familyMembers = members.filter(m => !['Friend','Best Friend','Colleague','Neighbor','Childhood Friend'].includes(m.rel));
-  const friends = members.filter(m => ['Friend','Best Friend','Colleague','Neighbor','Childhood Friend'].includes(m.rel));
-
-  const positions = [self];
-  // Parents top
-  const parents = familyMembers.filter(m => ['Father','Mother','Grandfather','Grandmother','Stepfather','Stepmother'].includes(m.rel));
-  const parentsY = 90;
-  parents.forEach((m, i) => {
-    m.x = 180 + i * 180;
-    m.y = parentsY;
-    positions.push(m);
-  });
-  // Siblings right
-  const siblings = familyMembers.filter(m => ['Brother','Sister'].includes(m.rel));
-  siblings.forEach((m, i) => { m.x = 550; m.y = 180 + i * 100; positions.push(m); });
-  // Spouse
-  const spouses = familyMembers.filter(m => m.rel === 'Spouse');
-  spouses.forEach((m, i) => { m.x = 200; m.y = 240 + i * 80; positions.push(m); });
-  // Children
-  const children = familyMembers.filter(m => ['Son','Daughter'].includes(m.rel));
-  children.forEach((m, i) => { m.x = 250 + i * 160; m.y = 390; positions.push(m); });
-  // Others
-  const others = familyMembers.filter(m => !parents.includes(m) && !siblings.includes(m) && !spouses.includes(m) && !children.includes(m));
-  others.forEach((m, i) => { m.x = 100 + i * 150; m.y = 390; positions.push(m); });
-  // Friends bottom-left
-  friends.forEach((m, i) => { m.x = 80 + i * 120; m.y = 440; positions.push(m); });
-
-  // Draw edges
-  positions.forEach(m => {
-    if (m.id === 'self') return;
-    drawLine(svg, self.x, self.y, m.x, m.y, friends.includes(m) ? '#9B59B6' : getRelColor(m.rel));
-  });
-
-  // Draw nodes
-  positions.forEach((m, i) => {
-    const isSelf = m.id === 'self';
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.classList.add('tree-node');
-    g.setAttribute('transform', `translate(${m.x},${m.y})`);
-
-    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    const nodeW = 100, nodeH = 56;
-    bg.setAttribute('x', -nodeW/2); bg.setAttribute('y', -nodeH/2);
-    bg.setAttribute('width', nodeW); bg.setAttribute('height', nodeH);
-    bg.setAttribute('rx', 12);
-    bg.setAttribute('fill', isSelf ? '#5C3D2E' : (members.filter(x=>x.registered).includes(m) ? '#3A6B35' : 'white'));
-    bg.setAttribute('stroke', isSelf ? '#C8900A' : getRelColor(m.rel || ''));
-    bg.setAttribute('stroke-width', isSelf ? 2.5 : 1.5);
-
-    const textC = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    textC.setAttribute('text-anchor', 'middle');
-    textC.setAttribute('y', -6);
-    textC.setAttribute('font-size', '13');
-    textC.setAttribute('font-weight', '600');
-    textC.setAttribute('font-family', "'DM Sans', sans-serif");
-    textC.setAttribute('fill', isSelf || members.filter(x=>x.registered).includes(m) ? 'white' : '#1E1410');
-    textC.textContent = m.name.length > 12 ? m.name.substring(0,12)+'…' : m.name;
-
-    const subT = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    subT.setAttribute('text-anchor', 'middle');
-    subT.setAttribute('y', 12);
-    subT.setAttribute('font-size', '10.5');
-    subT.setAttribute('font-family', "'DM Sans', sans-serif");
-    subT.setAttribute('fill', isSelf ? 'rgba(250,247,242,0.75)' : getRelColor(m.rel || ''));
-    subT.textContent = isSelf ? '⭐ You' : m.rel;
-
-    g.appendChild(bg);
-    g.appendChild(textC);
-    g.appendChild(subT);
-
-    if (!isSelf) {
-      g.addEventListener('click', () => showMemberDetail(m));
-    }
-    svg.appendChild(g);
-  });
-}
-
-function drawLine(svg, x1, y1, x2, y2, color) {
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-  line.setAttribute('stroke', color || '#ccc');
-  line.setAttribute('stroke-width', '1.5');
-  line.setAttribute('stroke-dasharray', '4 3');
-  line.setAttribute('opacity', '0.6');
-  svg.insertBefore(line, svg.firstChild);
-}
-
-// ====== MEMBERS GRID ======
-let currentFilter = 'all';
-function filterMembers(type, el) {
-  currentFilter = type;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  let filtered = members;
-  if (type === 'family') filtered = members.filter(m => !['Friend','Best Friend','Colleague','Neighbor','Childhood Friend'].includes(m.rel));
-  if (type === 'friend') filtered = members.filter(m => ['Friend','Best Friend','Colleague','Neighbor','Childhood Friend'].includes(m.rel));
-  if (type === 'registered') filtered = members.filter(m => m.registered);
-  renderMembersGrid(filtered);
-}
-
-function renderMembersGrid(list) {
-  const grid = document.getElementById('membersGrid');
-  if (!list.length) {
-    grid.innerHTML = '<div class="empty-state"><div class="big-icon">👥</div><h3>No members yet</h3><p>Add your first family member using the button above</p></div>';
-    return;
-  }
-  grid.innerHTML = list.map((m, i) => `
-    <div class="member-card">
-      <div class="member-card-header">
-        <div class="avatar ${getAvatarColor(i)}">${getInitials(m.name)}</div>
-        <div>
-          <div class="member-name">${m.name} ${m.registered ? '<span class="registered-badge">✓ On KinLink</span>' : ''}</div>
-          <span class="member-rel">${m.rel}</span>
-        </div>
-      </div>
-      ${m.phone ? `<div class="member-detail">📞 ${m.phone}</div>` : ''}
-      ${m.email ? `<div class="member-detail">📧 ${m.email}</div>` : ''}
-      ${m.city ? `<div class="member-detail">📍 ${m.city}</div>` : ''}
-      <div class="member-actions">
-        <button class="action-btn" onclick="showMemberDetail(members.find(x=>x.id===${m.id}))">View</button>
-        ${m.registered ? `<button class="action-btn chat" onclick="startChat(${m.id})">💬 Chat</button>` : '<button class="action-btn" onclick="toast(\'Member not registered on KinLink yet\')">Invite</button>'}
-      </div>
-    </div>
-  `).join('');
-}
-
-// ====== MEMBER DETAIL ======
-function showMemberDetail(m) {
-  if (!m) return;
-  const i = members.indexOf(m);
-  document.getElementById('memberDetailContent').innerHTML = `
-    <h2>${m.name}</h2>
-    <p class="sub">${m.rel}${m.city ? ' · ' + m.city : ''}</p>
-    <div style="display:flex;align-items:center;justify-content:center;margin:1.2rem 0">
-      <div class="avatar ${getAvatarColor(i || 0)}" style="width:72px;height:72px;font-size:1.8rem">${getInitials(m.name)}</div>
-    </div>
-    ${m.phone ? `<div class="member-detail" style="margin-bottom:8px;font-size:0.9rem">📞 ${m.phone} ${m.registered ? '<span class="registered-badge">✓ KinLink</span>' : ''}</div>` : ''}
-    ${m.email ? `<div class="member-detail" style="margin-bottom:8px;font-size:0.9rem">📧 ${m.email}</div>` : ''}
-    ${m.about ? `<div style="background:var(--warm-bg);border-radius:10px;padding:12px;font-size:0.88rem;color:var(--text-mid);margin-top:1rem">${m.about}</div>` : ''}
-    <div class="modal-footer" style="margin-top:1.5rem">
-      <button class="btn-cancel" onclick="closeModal('memberDetailModal')">Close</button>
-      ${m.registered ? `<button class="btn btn-leaf" onclick="startChat(${m.id});closeModal('memberDetailModal')">💬 Chat Now</button>` : `<button class="btn btn-primary" onclick="toast('Invite link sent to ${m.name}!');closeModal('memberDetailModal')">📨 Invite</button>`}
-    </div>
-  `;
-  openModal('memberDetailModal');
-}
-
-// ====== CHAT ======
-const sampleMsgs = [
-  { type: 'received', text: 'Hi! How are you doing?', time: '10:20 AM' },
-  { type: 'sent', text: 'All good! How about you?', time: '10:21 AM' },
-  { type: 'received', text: 'Great! When are you visiting?', time: '10:22 AM' },
-];
-
-function renderChatList() {
-  const chatItems = document.getElementById('chatItems');
-  const chatableMembers = members.filter(m => m.registered);
-  if (!chatableMembers.length) {
-    chatItems.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-soft);font-size:0.88rem">No registered family members yet</div>';
-    return;
-  }
-  chatItems.innerHTML = chatableMembers.map((m, i) => {
-    const conv = conversations[m.id] || [];
-    const lastMsg = conv.length ? conv[conv.length - 1] : null;
-    const unread = conv.filter(msg => msg.type === 'received' && !msg.read).length;
-    return `
-      <div class="chat-item ${activeChatMemberId === m.id ? 'active' : ''}" onclick="openChat(${m.id})">
-        <div class="avatar ${getAvatarColor(i)}" style="flex-shrink:0">${getInitials(m.name)}</div>
-        <div class="chat-item-info">
-          <div class="chat-item-name">${m.name}</div>
-          <div class="chat-item-preview">${lastMsg ? (lastMsg.media ? '📷 Media' : lastMsg.text) : m.rel}</div>
-        </div>
-        <div class="chat-item-meta">
-          <div class="chat-time">${lastMsg ? lastMsg.time : ''}</div>
-          ${unread ? `<div class="unread-count">${unread}</div>` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function filterChats(q) {
-  document.querySelectorAll('.chat-item').forEach(item => {
-    item.style.display = item.querySelector('.chat-item-name').textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
-  });
-}
-
-function startChat(memberId) {
-  showAppPage('chat');
-  setTimeout(() => openChat(memberId), 100);
-}
-
-function openChat(memberId) {
-  activeChatMemberId = memberId;
-  const m = members.find(x => x.id === memberId);
-  if (!m) return;
-  if (!conversations[memberId]) {
-    conversations[memberId] = [...sampleMsgs.map(msg => ({...msg, id: Date.now() + Math.random()}))];
-  }
-  conversations[memberId].forEach(msg => msg.read = true);
-
-  const i = members.indexOf(m);
-  document.getElementById('chatWindow').innerHTML = `
-    <div class="chat-header">
-      <div class="avatar ${getAvatarColor(i)}">${getInitials(m.name)}</div>
-      <div class="chat-header-info">
-        <div class="chat-header-name">${m.name}</div>
-        <div class="chat-header-status">● Online · ${m.rel}</div>
-      </div>
-    </div>
-    <div class="chat-messages" id="chatMessages"></div>
-    <div class="chat-input-bar">
-      <div class="gif-picker hidden" id="gifPicker">
-        ${['😂','😍','🎉','🙏','❤️','🔥','👍','😎','🥳','🤣','😭','🙌'].map(e => `<div class="gif-option" onclick="sendGif('${e}')">${e}</div>`).join('')}
-      </div>
-      <div id="mediaPreviewBar" class="media-preview-bar"></div>
-      <div class="chat-input-row">
-        <button class="media-btn" title="Image" onclick="triggerFileInput('imageInput')">🖼️</button>
-        <button class="media-btn" title="Video" onclick="triggerFileInput('videoInput')">🎬</button>
-        <button class="media-btn" title="GIF" onclick="toggleGifPicker()">✨</button>
-        <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMessage()">
-        <button class="send-btn" onclick="sendMessage()">➤</button>
-      </div>
-      <input type="file" id="imageInput" accept="image/*" style="display:none" multiple onchange="handleMediaUpload(this,'image')">
-      <input type="file" id="videoInput" accept="video/*" style="display:none" onchange="handleMediaUpload(this,'video')">
-    </div>
-  `;
-  renderMessages(memberId);
-  renderChatList();
-}
-
-function renderMessages(memberId) {
-  const conv = conversations[memberId] || [];
-  const container = document.getElementById('chatMessages');
-  if (!container) return;
-  container.innerHTML = conv.map(msg => `
-    <div class="msg ${msg.type}">
-      <div class="msg-bubble">
-        ${msg.text || ''}
-        ${msg.media === 'image' ? `<img src="${msg.src}" class="msg-image" alt="image">` : ''}
-        ${msg.media === 'gif' ? `<div style="font-size:2.5rem">${msg.src}</div>` : ''}
-        ${msg.media === 'video' ? `<video src="${msg.src}" controls style="max-width:220px;border-radius:10px;margin-top:4px;display:block"></video>` : ''}
-        <div class="msg-time" style="margin-top:4px;text-align:${msg.type==='sent'?'right':'left'}">${msg.time}</div>
-      </div>
-    </div>
-  `).join('');
-  container.scrollTop = container.scrollHeight;
-}
-
-function sendMessage() {
-  const input = document.getElementById('chatInput');
-  const text = input ? input.value.trim() : '';
-  if (!text && !pendingMedia.length) return;
-  const now = new Date();
-  const time = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-
-  if (text) {
-    conversations[activeChatMemberId].push({ type: 'sent', text, time, read: true, id: Date.now() });
-    if (input) input.value = '';
-  }
-  pendingMedia.forEach(pm => {
-    conversations[activeChatMemberId].push({ type: 'sent', media: pm.type, src: pm.src, time, read: true, id: Date.now() + Math.random() });
-  });
-  pendingMedia = [];
-  document.getElementById('mediaPreviewBar').innerHTML = '';
-
-  renderMessages(activeChatMemberId);
-  renderChatList();
-
-  // Simulate reply
-  if (Math.random() > 0.3) {
-    const replies = ['That\'s wonderful! 😊', 'I agree!', 'Love this! ❤️', 'When are you free to call?', '🙏 Thank you!'];
-    setTimeout(() => {
-      conversations[activeChatMemberId].push({ type: 'received', text: replies[Math.floor(Math.random()*replies.length)], time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), read: true, id: Date.now() });
-      renderMessages(activeChatMemberId);
-      renderChatList();
-    }, 1200 + Math.random() * 1200);
-  }
-}
-
-function sendGif(emoji) {
-  const now = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  conversations[activeChatMemberId].push({ type: 'sent', media: 'gif', src: emoji, time: now, read: true, id: Date.now() });
-  renderMessages(activeChatMemberId);
-  document.getElementById('gifPicker').classList.add('hidden');
-  showGifPicker = false;
-}
-
-function toggleGifPicker() {
-  showGifPicker = !showGifPicker;
-  const picker = document.getElementById('gifPicker');
-  if (picker) picker.classList.toggle('hidden', !showGifPicker);
-}
-
-function triggerFileInput(id) { document.getElementById(id) && document.getElementById(id).click(); }
-
-function handleMediaUpload(input, type) {
-  const files = Array.from(input.files);
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      pendingMedia.push({ type, src: e.target.result });
-      renderMediaPreview();
-    };
-    reader.readAsDataURL(file);
-  });
-  input.value = '';
-}
-
-function renderMediaPreview() {
-  const bar = document.getElementById('mediaPreviewBar');
-  if (!bar) return;
-  bar.innerHTML = pendingMedia.map((pm, i) => `
-    <div class="media-preview">
-      ${pm.type === 'image' ? `<img src="${pm.src}" alt="preview">` : `<div style="width:56px;height:56px;background:var(--warm-bg);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem">🎬</div>`}
-      <button class="media-preview-remove" onclick="removePendingMedia(${i})">✕</button>
-    </div>
-  `).join('');
-}
-
-function removePendingMedia(i) {
-  pendingMedia.splice(i, 1);
-  renderMediaPreview();
-}
-
-function renderChatableMembers() {
-  const list = document.getElementById('chatableMembersList');
-  const chatables = members.filter(m => m.registered);
-  if (!chatables.length) {
-    list.innerHTML = '<p style="color:var(--text-soft);text-align:center;padding:1rem">No registered members yet. Add members with phone numbers that are on KinLink.</p>';
-    return;
-  }
-  list.innerHTML = chatables.map((m, i) => `
-    <div class="chat-item" onclick="closeModal('newChatModal');startChat(${m.id})" style="border-radius:12px;margin-bottom:4px">
-      <div class="avatar ${getAvatarColor(i)}">${getInitials(m.name)}</div>
-      <div class="chat-item-info">
-        <div class="chat-item-name">${m.name}</div>
-        <div class="chat-item-preview">${m.rel} · ${m.phone}</div>
-      </div>
-      <span style="font-size:0.8rem;color:var(--leaf);font-weight:600">Chat →</span>
-    </div>
-  `).join('');
-}
-
-// ====== SUGGESTIONS ======
-const suggestedPeople = [
-  { id: 's1', name: 'Kiran Sharma', reason: 'Has same last name as members in your tree', city: 'Hyderabad', mutual: 3, initials: 'KS', color: 'avatar-sky' },
-  { id: 's2', name: 'Deepa Reddy', reason: 'Connected to Vikram Reddy in your tree', city: 'Bengaluru', mutual: 1, initials: 'DR', color: 'avatar-blush' },
-  { id: 's3', name: 'Suresh Nair', reason: 'Shares common family connections', city: 'Chennai', mutual: 2, initials: 'SN', color: 'avatar-gold' },
-];
-
-let selectedRelTypes = {};
-
-function renderSuggestions() {
-  const grid = document.getElementById('suggestionsGrid');
-  grid.innerHTML = suggestedPeople.map(p => `
-    <div class="suggestion-card" id="sug-${p.id}">
-      <div class="suggestion-header">
-        <div class="avatar ${p.color}">${p.initials}</div>
-        <div>
-          <div style="font-weight:600;font-size:0.95rem">${p.name}</div>
-          <div style="font-size:0.78rem;color:var(--text-soft)">📍 ${p.city} · ${p.mutual} mutual connection${p.mutual !== 1 ? 's' : ''}</div>
-        </div>
-      </div>
-      <div class="suggestion-reason">${p.reason}</div>
-      <div style="font-size:0.8rem;font-weight:600;color:var(--text-mid);margin-bottom:8px">Add as:</div>
-      <div class="rel-type-picker">
-        <button class="rel-pill" onclick="selectRelType('${p.id}','family',this)">👨‍👩‍👧 Family</button>
-        <button class="rel-pill" onclick="selectRelType('${p.id}','friend',this)">🤝 Friend</button>
-        <button class="rel-pill" onclick="selectRelType('${p.id}','cousin',this)">👥 Cousin</button>
-      </div>
-      <div class="sug-actions">
-        <button class="btn btn-sm btn-leaf" onclick="acceptSuggestion('${p.id}','${p.name}')">Connect</button>
-        <button class="btn btn-sm btn-outline" onclick="dismissSuggestion('${p.id}')">Dismiss</button>
-      </div>
-    </div>
-  `).join('');
-
-  // Requests
-  const reqGrid = document.getElementById('requestsGrid');
-  reqGrid.innerHTML = `
-    <div class="member-card">
-      <div class="member-card-header">
-        <div class="avatar avatar-leaf">MR</div>
-        <div>
-          <div class="member-name">Meena Rao</div>
-          <span class="member-rel">Wants to connect</span>
-        </div>
-      </div>
-      <div class="member-detail">📍 Hyderabad · 2 mutual connections</div>
-      <div class="member-actions">
-        <button class="action-btn chat" onclick="toast('✅ Meena Rao added to your tree!');this.closest('.member-card').remove()">Accept</button>
-        <button class="action-btn" onclick="this.closest('.member-card').remove()">Decline</button>
-      </div>
-    </div>
-  `;
-}
-
-function selectRelType(personId, type, el) {
-  selectedRelTypes[personId] = type;
-  const picker = el.closest('.rel-type-picker');
-  picker.querySelectorAll('.rel-pill').forEach(p => { p.classList.remove('selected-family','selected-friend'); });
-  el.classList.add(type === 'friend' ? 'selected-friend' : 'selected-family');
-}
-
-function acceptSuggestion(personId, name) {
-  const type = selectedRelTypes[personId] || 'friend';
-  const rel = type === 'family' ? 'Relative' : 'Friend';
-  members.push({ id: Date.now(), name, rel, phone: '', email: '', registered: false });
-  document.getElementById('sug-' + personId).style.opacity = '0.4';
-  document.getElementById('sug-' + personId).style.pointerEvents = 'none';
-  toast('✅ ' + name + ' added as ' + rel + '!');
-}
-
-function dismissSuggestion(personId) {
-  document.getElementById('sug-' + personId).remove();
-  toast('Suggestion dismissed');
-}
-
-function switchConnectTab(tab, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('suggestionsView').style.display = tab === 'suggestions' ? 'block' : 'none';
-  document.getElementById('requestsView').style.display = tab === 'requests' ? 'block' : 'none';
-}
-
-// ====== PROFILE ======
-function renderProfile() {
-  if (!currentUser) return;
-  document.getElementById('profileName').textContent = currentUser.name;
-  document.getElementById('profilePhone').textContent = currentUser.phone || '';
-  document.getElementById('profileEmail').textContent = currentUser.email || '';
-  document.getElementById('profileAvatar').textContent = currentUser.initials || getInitials(currentUser.name);
-  document.getElementById('statMembers').textContent = members.length;
-  document.getElementById('statChats').textContent = Object.keys(conversations).length;
-  document.getElementById('statConnections').textContent = members.length + 3;
-
-  const ef = document.getElementById('edit-fname');
-  const el = document.getElementById('edit-lname');
-  const ep = document.getElementById('edit-phone');
-  const ee = document.getElementById('edit-email');
-  if (ef) ef.value = currentUser.fname || currentUser.name.split(' ')[0];
-  if (el) el.value = currentUser.lname || currentUser.name.split(' ').slice(1).join(' ');
-  if (ep) ep.value = currentUser.phone || '';
-  if (ee) ee.value = currentUser.email || '';
-}
-
-function saveProfile() {
-  const fn = document.getElementById('edit-fname').value.trim();
-  const ln = document.getElementById('edit-lname').value.trim();
-  if (!fn) { toast('⚠️ Name is required'); return; }
-  currentUser.name = fn + ' ' + ln;
-  currentUser.fname = fn; currentUser.lname = ln;
-  currentUser.initials = getInitials(currentUser.name);
-  currentUser.phone = document.getElementById('edit-phone').value.trim();
-  currentUser.email = document.getElementById('edit-email').value.trim();
-  document.getElementById('sidebarName').textContent = currentUser.name;
-  document.getElementById('sidebarAvatar').textContent = currentUser.initials;
-  closeModal('editProfileModal');
-  renderProfile();
-  toast('✅ Profile updated!');
-}
 </script>
 </body>
 </html>
