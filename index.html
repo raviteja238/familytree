@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KinTree – Family & Friends Network</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -852,32 +851,36 @@
     <div class="auth-logo">🌳 KinTree</div>
     <div class="auth-tagline">Connect & preserve your family legacy</div>
 
-    <!-- Setup Notice -->
-    <div class="setup-notice" id="setup-notice">
-      ⚙️ <strong>Setup required:</strong> Edit the <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in the <code>&lt;script&gt;</code> at the bottom of this file with your Supabase project credentials. <a href="https://supabase.com" target="_blank">Get started at supabase.com →</a>
+    <!-- Setup Notice (hidden once Supabase is configured) -->
+    <div class="setup-notice" id="setup-notice" style="display:none;">
+      ⚙️ <strong>Supabase not configured.</strong> Add your credentials in the script, or
+      <a href="#" onclick="showDemoMode();return false;">try the demo →</a>
     </div>
 
     <!-- Login Form -->
     <div id="login-form">
-      <button class="btn btn-google" onclick="signInWithGoogle()">
+      <button class="btn btn-google" id="btn-google" onclick="signInWithGoogle()">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Continue with Google
       </button>
       <div class="auth-divider">or sign in with email</div>
+      <div id="auth-error" style="display:none;background:rgba(224,91,91,0.12);border:1px solid rgba(224,91,91,0.35);border-radius:8px;padding:10px 14px;font-size:13px;color:#e05b5b;margin-bottom:12px;"></div>
       <div class="form-group">
         <label>Email</label>
-        <input type="email" id="login-email" placeholder="your@email.com">
+        <input type="email" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')signIn()">
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="login-password" placeholder="••••••••">
+        <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')signIn()">
       </div>
-      <button class="btn btn-primary" onclick="signIn()">Sign In</button>
+      <button class="btn btn-primary" id="btn-signin" onclick="signIn()">Sign In</button>
       <div class="auth-toggle">No account? <a onclick="showRegister()">Create one →</a></div>
+      <div class="auth-toggle" style="margin-top:10px;">Just exploring? <a href="#" onclick="showDemoMode();return false;">Try the demo →</a></div>
     </div>
 
     <!-- Register Form -->
     <div id="register-form" style="display:none">
+      <div id="auth-error-reg" style="display:none;background:rgba(224,91,91,0.12);border:1px solid rgba(224,91,91,0.35);border-radius:8px;padding:10px 14px;font-size:13px;color:#e05b5b;margin-bottom:12px;"></div>
       <div class="form-group">
         <label>First Name</label>
         <input type="text" id="reg-firstname" placeholder="First name">
@@ -898,7 +901,7 @@
         <label>Date of Birth</label>
         <input type="date" id="reg-dob">
       </div>
-      <button class="btn btn-primary" onclick="signUp()">Create Account</button>
+      <button class="btn btn-primary" id="btn-signup" onclick="signUp()">Create Account</button>
       <div class="auth-toggle">Already have an account? <a onclick="showLogin()">Sign in →</a></div>
     </div>
   </div>
@@ -1203,66 +1206,120 @@
 // ═══════════════════════════════════════════════
 // CONFIGURATION — Edit these!
 // ═══════════════════════════════════════════════
-const SUPABASE_URL = 'https://dnfcocbwjrlbvmpazppc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_iyMoqpuYk7k5iAPn7xBRwg_wKh0nUfW';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+// Load Supabase SDK dynamically so a CDN failure never blocks the page
+(function() {
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.onload = function() { bootApp(); };
+  s.onerror = function() {
+    console.warn('Supabase SDK failed to load — running in demo mode');
+    bootApp();
+  };
+  document.head.appendChild(s);
+})();
 
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-let supabase, currentUser, currentProfile, members = [], conversations = [], activeConvId = null;
+let supabase = null, currentUser, currentProfile, members = [], conversations = [], activeConvId = null;
 let treeScale = 1, treeOffsetX = 0, treeOffsetY = 0, treeFilter = 'family';
 let isDragging = false, dragStart = {x:0,y:0};
 let realtimeChannel = null;
 let groupSelected = [];
+let supabaseReady = false;
 
 function initSupabase() {
-  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-    showToast('⚠️ Please configure Supabase credentials in the script section');
+  if (supabaseReady) return true;
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL) return false;
+  try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseReady = true;
+    return true;
+  } catch(e) {
+    console.error('Supabase init failed:', e);
     return false;
   }
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  return true;
+}
+
+function showAuthError(msg, isReg) {
+  const id = isReg ? 'auth-error-reg' : 'auth-error';
+  const el = document.getElementById(id);
+  if (!el) return showToast('❌ ' + msg);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearAuthError() {
+  ['auth-error','auth-error-reg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function setBtnLoading(id, loading, label) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading ? '⏳ Please wait…' : label;
 }
 
 // ═══════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════
 async function signIn() {
-  if (!initSupabase()) return showDemoMode();
+  clearAuthError();
+  if (!supabaseReady) return showDemoMode();
   const email = document.getElementById('login-email').value.trim();
   const pw = document.getElementById('login-password').value;
-  if (!email || !pw) return showToast('Fill in email and password');
+  if (!email || !pw) return showAuthError('Please enter your email and password.');
+  setBtnLoading('btn-signin', true, 'Sign In');
   const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-  if (error) showToast('❌ ' + error.message);
-  else { checkSession(); }
+  setBtnLoading('btn-signin', false, 'Sign In');
+  if (error) showAuthError(error.message);
+  else checkSession();
 }
 
 async function signUp() {
-  if (!initSupabase()) return showDemoMode();
+  clearAuthError();
+  if (!supabaseReady) return showDemoMode();
   const fn = document.getElementById('reg-firstname').value.trim();
   const ln = document.getElementById('reg-lastname').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const pw = document.getElementById('reg-password').value;
   const dob = document.getElementById('reg-dob').value;
-  if (!fn || !email || !pw) return showToast('Fill in required fields');
+  if (!fn || !email || !pw) return showAuthError('Please fill in all required fields.', true);
+  if (pw.length < 6) return showAuthError('Password must be at least 6 characters.', true);
+  setBtnLoading('btn-signup', true, 'Create Account');
   const { data, error } = await supabase.auth.signUp({ email, password: pw });
-  if (error) return showToast('❌ ' + error.message);
+  setBtnLoading('btn-signup', false, 'Create Account');
+  if (error) return showAuthError(error.message, true);
   if (data.user) {
     await supabase.from('profiles').insert([{
       id: data.user.id, first_name: fn, last_name: ln,
       email, date_of_birth: dob || null, created_at: new Date().toISOString()
     }]);
-    showToast('✅ Account created! Check your email to verify.');
+    showAuthError('✅ Account created! Check your email to verify.', true);
   }
 }
 
 async function signInWithGoogle() {
-  if (!initSupabase()) return showDemoMode();
+  clearAuthError();
+  if (!supabaseReady) {
+    showAuthError('Supabase not configured. Use email login or try the demo.');
+    return;
+  }
+  const btn = document.getElementById('btn-google');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Redirecting…'; }
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.href }
   });
-  if (error) showToast('❌ ' + error.message);
+  if (error) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continue with Google'; }
+    showAuthError(error.message);
+  }
 }
 
 async function signOut() {
@@ -1925,13 +1982,23 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 // ═══════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
+// Called once the Supabase SDK script has loaded (or failed)
+function bootApp() {
   const ok = initSupabase();
-  if (ok) {
-    document.getElementById('setup-notice').style.display = 'none';
+  if (!ok) {
+    const notice = document.getElementById('setup-notice');
+    if (notice) notice.style.display = 'block';
+  } else {
     checkSession();
   }
-});
+}
+
+// Fallback: if DOM wasn't ready yet when SDK loaded, wait for it
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function waitForSdk() {
+    // bootApp() will be called by the script onload above
+  });
+}
 </script>
 </body>
 </html>
