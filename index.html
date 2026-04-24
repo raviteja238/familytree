@@ -1212,7 +1212,7 @@ const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 // Load Supabase SDK dynamically so a CDN failure never blocks the page
 (function() {
   var s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
   s.onload = function() { bootApp(); };
   s.onerror = function() {
     console.warn('Supabase SDK failed to load — running in demo mode');
