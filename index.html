@@ -1422,7 +1422,7 @@ async function saveProfile() {
 async function loadMembers() {
   if (supabase) {
     const { data } = await supabase.from('members')
-      .select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+      .select('*').eq('owner_id', currentUser.id).order('created_at', { ascending: false });
     if (data) members = data;
   }
 }
@@ -1515,7 +1515,7 @@ async function addMember() {
   const fn = document.getElementById('am-firstname').value.trim();
   if (!fn) return showToast('First name is required');
   const member = {
-    user_id: currentUser.id,
+    owner_id: currentUser.id,
     first_name: fn,
     last_name: document.getElementById('am-lastname').value.trim(),
     date_of_birth: document.getElementById('am-dob').value || null,
