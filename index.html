@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rootline — A Family Ledger</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -29,8 +30,7 @@ body{
   background:var(--paper);
   color:var(--ink);
   min-height:100vh;
-  background-image:
-    radial-gradient(circle at 1px 1px, rgba(46,81,54,0.05) 1px, transparent 0);
+  background-image:radial-gradient(circle at 1px 1px, rgba(46,81,54,0.05) 1px, transparent 0);
   background-size:22px 22px;
 }
 h1,h2,h3{font-family:var(--font-display); margin:0 0 6px 0; font-weight:600; color:var(--pine-dark);}
@@ -38,34 +38,16 @@ p{line-height:1.55;}
 a{color:inherit;}
 button{font-family:var(--font-body); cursor:pointer;}
 input,select,textarea{
-  font-family:var(--font-body);
-  font-size:0.95rem;
-  padding:10px 12px;
-  border:1.5px solid var(--line);
-  border-radius:6px;
-  background:#fff;
-  color:var(--ink);
-  width:100%;
+  font-family:var(--font-body); font-size:0.95rem; padding:10px 12px;
+  border:1.5px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); width:100%;
 }
-input:focus,select:focus,textarea:focus{
-  outline:2px solid var(--brass-light);
-  outline-offset:1px;
-  border-color:var(--brass);
-}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--brass-light); outline-offset:1px; border-color:var(--brass);}
 label{font-size:0.82rem; font-weight:600; letter-spacing:.02em; color:var(--pine-dark); display:block; margin-bottom:5px; text-transform:uppercase;}
 .field{margin-bottom:16px;}
 .hint{font-size:0.8rem; color:#6b6355; margin-top:4px;}
-
-/* ---------- signature branch divider ---------- */
 .branch-rule{width:100%; height:22px; margin:14px 0 22px;}
 .branch-rule svg{width:100%; height:100%; display:block;}
-
-/* ---------- buttons ---------- */
-.btn{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:10px 18px; border-radius:7px; font-weight:600; font-size:0.9rem;
-  border:1.5px solid transparent; transition:transform .12s ease, box-shadow .12s ease;
-}
+.btn{display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:7px; font-weight:600; font-size:0.9rem; border:1.5px solid transparent; transition:transform .12s ease;}
 .btn:active{transform:translateY(1px);}
 .btn-primary{background:var(--pine); color:#F6F1E4; border-color:var(--pine);}
 .btn-primary:hover{background:var(--pine-dark);}
@@ -75,58 +57,29 @@ label{font-size:0.82rem; font-weight:600; letter-spacing:.02em; color:var(--pine
 .btn-danger:hover{background:rgba(160,90,62,0.1);}
 .btn-sm{padding:6px 12px; font-size:0.8rem;}
 .btn[disabled]{opacity:.45; cursor:not-allowed;}
-
-/* ---------- app shell ---------- */
 .app-shell{display:flex; min-height:100vh; align-items:stretch;}
-.sidebar{
-  width:232px; flex-shrink:0; background:var(--pine-dark); color:#EFE7D2;
-  display:flex; flex-direction:column; padding:26px 0 18px;
-  position:sticky; top:0; height:100vh; overflow-y:auto;
-}
+.sidebar{width:232px; flex-shrink:0; background:var(--pine-dark); color:#EFE7D2; display:flex; flex-direction:column; padding:26px 0 18px; position:sticky; top:0; height:100vh; overflow-y:auto;}
 .brand{padding:0 22px 22px; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.12); margin-bottom:14px;}
 .brand svg{width:30px; height:30px; flex-shrink:0;}
 .brand-text .t1{font-family:var(--font-display); font-size:1.28rem; line-height:1.1;}
 .brand-text .t2{font-size:0.68rem; letter-spacing:.06em; text-transform:uppercase; opacity:.65;}
-
 .navlist{display:flex; flex-direction:column; gap:2px; padding:0 10px; flex:1;}
-.navbtn{
-  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
-  background:transparent; border:none; color:#EFE7D2; padding:11px 14px;
-  border-radius:8px 3px 3px 8px; font-size:0.92rem; font-weight:500;
-}
+.navbtn{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:none; color:#EFE7D2; padding:11px 14px; border-radius:8px 3px 3px 8px; font-size:0.92rem; font-weight:500;}
 .navbtn:hover{background:rgba(255,255,255,0.08);}
 .navbtn.active{background:var(--paper-card); color:var(--pine-dark); font-weight:700; box-shadow:inset 3px 0 0 var(--brass);}
 .navbtn .ic{width:18px; text-align:center;}
-.badge{
-  margin-left:auto; background:var(--rust); color:#fff; font-size:0.68rem; font-weight:700;
-  border-radius:20px; padding:1px 7px; min-width:18px; text-align:center;
-}
-
+.badge{margin-left:auto; background:var(--rust); color:#fff; font-size:0.68rem; font-weight:700; border-radius:20px; padding:1px 7px; min-width:18px; text-align:center;}
 .sidebar-foot{padding:14px 22px 0; border-top:1px solid rgba(255,255,255,0.12); margin-top:10px;}
 .who{font-size:0.85rem; margin-bottom:8px; opacity:.9;}
 .who b{display:block; font-family:var(--font-display); font-size:1rem;}
-
 main{flex:1; padding:38px 44px; min-width:0;}
-.card{
-  background:var(--paper-card); border-radius:6px; padding:30px 34px;
-  box-shadow:0 1px 0 rgba(0,0,0,0.03), 0 10px 26px -18px rgba(27,50,32,0.35);
-  border:1px solid rgba(0,0,0,0.04);
-}
+.card{background:var(--paper-card); border-radius:6px; padding:30px 34px; box-shadow:0 1px 0 rgba(0,0,0,0.03), 0 10px 26px -18px rgba(27,50,32,0.35); border:1px solid rgba(0,0,0,0.04);}
 .eyebrow{font-family:var(--font-mono); font-size:0.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); margin-bottom:6px;}
 .container{max-width:1080px; margin:0 auto;}
 .row{display:flex; gap:24px; flex-wrap:wrap;}
 .col{flex:1; min-width:240px;}
-
-/* ---------- auth screen ---------- */
-.auth-wrap{
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-  padding:30px;
-}
-.auth-card{
-  max-width:440px; width:100%; background:var(--paper-card); border-radius:8px;
-  padding:38px 38px 32px; box-shadow:0 30px 60px -30px rgba(27,50,32,0.45);
-  border:1px solid rgba(0,0,0,0.05); position:relative; overflow:hidden;
-}
+.auth-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:30px;}
+.auth-card{max-width:440px; width:100%; background:var(--paper-card); border-radius:8px; padding:38px 38px 32px; box-shadow:0 30px 60px -30px rgba(27,50,32,0.45); border:1px solid rgba(0,0,0,0.05); position:relative; overflow:hidden;}
 .auth-tabs{display:flex; gap:6px; margin-bottom:22px; background:var(--paper); border-radius:8px; padding:4px;}
 .auth-tab{flex:1; text-align:center; padding:9px; border-radius:6px; border:none; background:transparent; font-weight:600; color:#77705f;}
 .auth-tab.active{background:var(--pine); color:#F6F1E4;}
@@ -135,55 +88,34 @@ main{flex:1; padding:38px 44px; min-width:0;}
 .radio-opt input{width:auto;}
 .err-msg{background:#F6E4DC; border:1px solid var(--rust); color:#7a3721; padding:9px 12px; border-radius:6px; font-size:0.85rem; margin-bottom:14px;}
 .ok-msg{background:#E4EDE1; border:1px solid var(--sage); color:#2c4a33; padding:9px 12px; border-radius:6px; font-size:0.85rem; margin-bottom:14px;}
-
-/* ---------- member cards ---------- */
 .member-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; margin-top:18px;}
-.member-card{
-  background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px;
-  display:flex; gap:12px; align-items:flex-start; transition:box-shadow .15s;
-}
+.member-card{background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px; display:flex; gap:12px; align-items:flex-start; transition:box-shadow .15s;}
 .member-card:hover{box-shadow:0 8px 20px -14px rgba(27,50,32,0.5);}
-.avatar{
-  width:44px; height:44px; border-radius:50%; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:var(--font-display); font-size:1rem;
-}
+.avatar{width:44px; height:44px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:var(--font-display); font-size:1rem;}
 .member-name{font-weight:700; font-size:0.98rem;}
 .member-meta{font-size:0.78rem; color:#6b6355; margin-top:2px;}
 .member-tag{display:inline-block; font-size:0.68rem; font-family:var(--font-mono); background:var(--paper); color:var(--pine-dark); padding:2px 7px; border-radius:20px; margin-top:6px;}
-
 .empty-state{text-align:center; padding:50px 20px; color:#6b6355;}
 .empty-state svg{width:56px; height:56px; margin-bottom:12px; opacity:.55;}
-
-/* ---------- chat ---------- */
-.chat-window{
-  height:440px; overflow-y:auto; background:var(--paper); border:1px solid var(--line);
-  border-radius:8px; padding:18px; display:flex; flex-direction:column; gap:12px; margin-bottom:16px;
-}
+.chat-window{height:440px; overflow-y:auto; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:18px; display:flex; flex-direction:column; gap:12px; margin-bottom:16px;}
 .msg{max-width:72%; padding:9px 13px; border-radius:12px; font-size:0.9rem; line-height:1.4; position:relative;}
-.msg .who{font-family:var(--font-mono); font-size:0.68rem; color:var(--brass); margin-bottom:2px; display:block; font-weight:700; opacity:1;}
+.msg .who{font-family:var(--font-mono); font-size:0.68rem; color:var(--brass); margin-bottom:2px; display:block; font-weight:700;}
 .msg .ts{font-size:0.64rem; color:#948b78; margin-top:4px; display:block;}
 .msg.mine{align-self:flex-end; background:var(--pine); color:#F6F1E4;}
 .msg.mine .who{color:var(--brass-light);}
 .msg.theirs{align-self:flex-start; background:#fff; border:1px solid var(--line);}
 .chat-input-row{display:flex; gap:10px;}
-
-/* ---------- requests / suggestions ---------- */
-.req-card{
-  background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 16px;
-  display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:10px; flex-wrap:wrap;
-}
+.req-card{background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:10px; flex-wrap:wrap;}
 .req-actions{display:flex; gap:8px;}
 .pill{font-size:0.7rem; font-family:var(--font-mono); padding:2px 9px; border-radius:20px; font-weight:600;}
 .pill.pending{background:#F3E3C4; color:#7a5a12;}
 .pill.accepted{background:#DCEBDD; color:#2c5c33;}
 .pill.declined{background:#F0DAD3; color:#7a3721;}
-
-/* ---------- tree ---------- */
 .tree-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:#fff; padding:10px;}
 .tree-legend{display:flex; gap:22px; margin-top:14px; font-size:0.8rem; color:#6b6355; flex-wrap:wrap;}
 .tree-legend span{display:inline-flex; align-items:center; gap:6px;}
 .legend-swatch{width:22px; height:2px; display:inline-block;}
-
+.conn-banner{position:fixed; top:0; left:0; right:0; background:var(--rust); color:#fff; text-align:center; font-size:0.82rem; padding:7px; z-index:50;}
 @media (max-width:860px){
   .app-shell{flex-direction:column;}
   .sidebar{width:100%; height:auto; position:relative; flex-direction:row; overflow-x:auto; padding:14px 0;}
@@ -200,67 +132,55 @@ main{flex:1; padding:38px 44px; min-width:0;}
 <div id="root"></div>
 
 <script>
-/* ============================= STORAGE HELPERS ============================= */
-async function stGet(key){
-  try{
-    const r = await window.storage.get(key, true);
-    return r ? JSON.parse(r.value) : null;
-  }catch(e){ return null; }
-}
-async function stSet(key, value){
-  try{ await window.storage.set(key, JSON.stringify(value), true); }
-  catch(e){ console.error('storage set failed', key, e); }
-}
+/* ============================================================
+   SUPABASE CONFIG — fill these in from your Supabase project's
+   Settings → API page, then this file is a fully working site.
+   See SETUP.md for the complete walkthrough.
+   ============================================================ */
+const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
+
+/* ============================= HELPERS ============================= */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function usernameToEmail(u){ return u.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@rootline.local'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function mapMember(r){ return { id:r.id, first:r.first, last:r.last, gender:r.gender||'', birthYear:r.birth_year, deathYear:r.death_year, bio:r.bio||'', addedBy:r.added_by }; }
+function mapRelation(r){ return { id:r.id, aId:r.a_id, bId:r.b_id, type:r.type, status:r.status, requestedBy:r.requested_by, approverUserId:r.approver_user_id, createdAt:new Date(r.created_at).getTime() }; }
+function mapChat(r){ return { id:r.id, userId:r.user_id, username:r.username, text:r.text, ts:new Date(r.created_at).getTime() }; }
+function mapProfile(r){ return { id:r.id, username:r.username, memberId:r.member_id }; }
+function upsertLocal(arr, item){ const i = arr.findIndex(x=>x.id===item.id); if(i>-1) arr[i]=item; else arr.push(item); }
 
 /* ============================= APP STATE ============================= */
 let DB = { users:[], members:[], relations:[], chat:[] };
 let loaded = false;
-let session = { user:null }; // in-memory only — logging in is required each visit, nothing is persisted to the browser
+let session = { user:null };
 let view = 'tree';
 let authTab = 'login';
 let authError = '';
-let regMode = 'new'; // 'new' | 'claim'
+let regMode = 'new';
 let searchQuery = '';
 let ancestorFor = '';
 let addRelationDefaults = null;
-let dismissedSuggestions = []; // {username, pairKey}
+let dismissedSuggestions = [];
+let realtimeChannel = null;
 
 const AVATAR_COLORS = ['#2E5136','#B07F2C','#A05A3E','#7C9C87','#3F6B4A','#8C6A2E','#5B7A63','#9C6B4E'];
-
-function colorFor(id){
-  let h=0; for(const c of id) h = (h*31 + c.charCodeAt(0)) % 997;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
-function initials(m){
-  return ((m.first||'?')[0]+(m.last||'')[0]).toUpperCase();
-}
-function fullName(m){
-  if(!m) return 'Unknown';
-  return [m.first, m.last].filter(Boolean).join(' ') || 'Unnamed';
-}
+function colorFor(id){ let h=0; for(const c of String(id)) h=(h*31+c.charCodeAt(0))%997; return AVATAR_COLORS[h%AVATAR_COLORS.length]; }
+function initials(m){ return ((m.first||'?')[0]+(m.last||'')[0]).toUpperCase(); }
+function fullName(m){ if(!m) return 'Unknown'; return [m.first,m.last].filter(Boolean).join(' ') || 'Unnamed'; }
 function getMember(id){ return DB.members.find(m=>m.id===id); }
 function getUserByMember(memberId){ return DB.users.find(u=>u.memberId===memberId); }
-function fmtYear(m){
-  if(!m) return '';
-  if(m.birthYear && m.deathYear) return m.birthYear+' – '+m.deathYear;
-  if(m.birthYear) return 'b. '+m.birthYear;
-  return '';
-}
-function fmtTime(ts){
-  const d = new Date(ts);
-  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
-}
-function esc(s){
-  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+function fmtYear(m){ if(!m) return ''; if(m.birthYear && m.deathYear) return m.birthYear+' – '+m.deathYear; if(m.birthYear) return 'b. '+m.birthYear; return ''; }
+function fmtTime(ts){ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
 
 /* ============================= RELATION HELPERS ============================= */
 function relationExists(aId,bId,type){
-  return DB.relations.some(r =>
-    r.type===type && r.status!=='declined' &&
-    ((r.aId===aId && r.bId===bId) || (type!=='parent-of' && r.aId===bId && r.bId===aId))
-  );
+  return DB.relations.some(r => r.type===type && r.status!=='declined' &&
+    ((r.aId===aId && r.bId===bId) || (type!=='parent-of' && r.aId===bId && r.bId===aId)));
 }
 function computeApprover(otherMemberId, currentUserId){
   const u = getUserByMember(otherMemberId);
@@ -268,60 +188,46 @@ function computeApprover(otherMemberId, currentUserId){
   return null;
 }
 async function createRelation(yourMemberId, otherMemberId, humanType){
-  let aId, bId, type;
-  if(humanType==='parent'){ aId = otherMemberId; bId = yourMemberId; type='parent-of'; }
-  else if(humanType==='child'){ aId = yourMemberId; bId = otherMemberId; type='parent-of'; }
-  else if(humanType==='spouse'){ aId = yourMemberId; bId = otherMemberId; type='spouse-of'; }
-  else { aId = yourMemberId; bId = otherMemberId; type='sibling-of'; }
-
-  if(relationExists(aId,bId,type)){
-    return {ok:false, msg:'That relation has already been recorded.'};
-  }
+  let aId,bId,type;
+  if(humanType==='parent'){ aId=otherMemberId; bId=yourMemberId; type='parent-of'; }
+  else if(humanType==='child'){ aId=yourMemberId; bId=otherMemberId; type='parent-of'; }
+  else if(humanType==='spouse'){ aId=yourMemberId; bId=otherMemberId; type='spouse-of'; }
+  else { aId=yourMemberId; bId=otherMemberId; type='sibling-of'; }
+  if(relationExists(aId,bId,type)) return {ok:false, msg:'That relation has already been recorded.'};
   const approverUserId = computeApprover(otherMemberId, session.user.id);
-  const rec = {
-    id:uid(), aId, bId, type,
-    status: approverUserId ? 'pending' : 'accepted',
-    requestedBy: session.user.id,
-    approverUserId,
-    createdAt: Date.now()
-  };
-  DB.relations.push(rec);
-  await stSet('relations', DB.relations);
+  const status = approverUserId ? 'pending' : 'accepted';
+  const {data, error} = await supabase.from('relations').insert({
+    a_id:aId, b_id:bId, type, status, requested_by:session.user.id, approver_user_id:approverUserId
+  }).select().single();
+  if(error) return {ok:false, msg:error.message};
+  upsertLocal(DB.relations, mapRelation(data));
   return {ok:true, pending: !!approverUserId};
 }
-
 function ownedMemberOptions(){
   const ids = new Set();
   if(session.user.memberId) ids.add(session.user.memberId);
   DB.members.forEach(m => { if(m.addedBy===session.user.id) ids.add(m.id); });
-  return [...ids].map(id => getMember(id)).filter(Boolean);
+  return [...ids].map(id=>getMember(id)).filter(Boolean);
 }
 
-/* ============================= GENEALOGY COMPUTATION ============================= */
-function acceptedEdges(type){
-  return DB.relations.filter(r=>r.type===type && r.status==='accepted');
-}
+/* ============================= GENEALOGY ============================= */
+function acceptedEdges(type){ return DB.relations.filter(r=>r.type===type && r.status==='accepted'); }
 function ancestorsOf(memberId){
   const parentEdges = acceptedEdges('parent-of');
-  let frontier = [memberId];
-  const generations = [];
-  const seen = new Set([memberId]);
+  let frontier=[memberId]; const generations=[]; const seen=new Set([memberId]);
   while(true){
-    const parents = [];
+    const parents=[];
     frontier.forEach(childId=>{
-      parentEdges.filter(e=>e.bId===childId).forEach(e=>{
-        if(!seen.has(e.aId)){ seen.add(e.aId); parents.push(e.aId); }
-      });
+      parentEdges.filter(e=>e.bId===childId).forEach(e=>{ if(!seen.has(e.aId)){ seen.add(e.aId); parents.push(e.aId);} });
     });
     if(parents.length===0) break;
-    generations.push(parents);
-    frontier = parents;
+    generations.push(parents); frontier=parents;
     if(generations.length>10) break;
   }
   return generations;
 }
 
-/* ============================= RENDER: SHELL ============================= */
+/* ============================= SHELL ============================= */
 const NAV_ITEMS = [
   {key:'tree', label:'Tree View', ic:'🌳'},
   {key:'members', label:'Add Member', ic:'➕'},
@@ -332,15 +238,12 @@ const NAV_ITEMS = [
   {key:'requests', label:'Requests', ic:'📜'},
   {key:'suggestions', label:'Suggestions', ic:'✨'},
 ];
-
 function logoSVG(){
   return `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M20 36V18" stroke="#DDB05B" stroke-width="2" stroke-linecap="round"/>
     <path d="M20 24C20 24 12 22 10 14" stroke="#EFE7D2" stroke-width="2" stroke-linecap="round"/>
     <path d="M20 20C20 20 28 18 30 10" stroke="#EFE7D2" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="20" cy="14" r="3.4" fill="#DDB05B"/>
-    <circle cx="9" cy="12" r="2.6" fill="#7C9C87"/>
-    <circle cx="31" cy="8" r="2.6" fill="#7C9C87"/>
+    <circle cx="20" cy="14" r="3.4" fill="#DDB05B"/><circle cx="9" cy="12" r="2.6" fill="#7C9C87"/><circle cx="31" cy="8" r="2.6" fill="#7C9C87"/>
   </svg>`;
 }
 function branchRule(){
@@ -351,28 +254,19 @@ function branchRule(){
     <circle cx="300" cy="2" r="2.6" fill="var(--brass)"/>
   </svg></div>`;
 }
-
-function pendingCountForUser(){
-  if(!session.user) return 0;
-  return DB.relations.filter(r=>r.status==='pending' && r.approverUserId===session.user.id).length;
-}
-
+function pendingCountForUser(){ if(!session.user) return 0; return DB.relations.filter(r=>r.status==='pending' && r.approverUserId===session.user.id).length; }
 function shellHTML(innerHTML){
   const pending = pendingCountForUser();
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand">
-        ${logoSVG()}
-        <div class="brand-text"><div class="t1">Rootline</div><div class="t2">A Family Ledger</div></div>
-      </div>
+      <div class="brand">${logoSVG()}<div class="brand-text"><div class="t1">Rootline</div><div class="t2">A Family Ledger</div></div></div>
       <div class="navlist">
-        ${NAV_ITEMS.map(n => `
+        ${NAV_ITEMS.map(n=>`
           <button class="navbtn ${view===n.key?'active':''}" data-nav="${n.key}">
             <span class="ic">${n.ic}</span> ${n.label}
             ${n.key==='requests' && pending>0 ? `<span class="badge">${pending}</span>` : ''}
-          </button>
-        `).join('')}
+          </button>`).join('')}
       </div>
       <div class="sidebar-foot">
         <div class="who">Signed in as<b>${esc(fullName(getMember(session.user.memberId)))}</b></div>
@@ -382,77 +276,65 @@ function shellHTML(innerHTML){
     <main><div class="container">${innerHTML}</div></main>
   </div>`;
 }
-
-function emptyState(icon, title, body){
-  return `<div class="empty-state">
-    <div style="font-size:2.4rem;">${icon}</div>
-    <h3>${esc(title)}</h3>
-    <p>${esc(body)}</p>
-  </div>`;
+function emptyState(icon,title,body){
+  return `<div class="empty-state"><div style="font-size:2.4rem;">${icon}</div><h3>${esc(title)}</h3><p>${esc(body)}</p></div>`;
 }
 
-/* ============================= RENDER: AUTH ============================= */
+/* ============================= AUTH VIEW ============================= */
 function renderAuth(){
   const unclaimed = DB.members.filter(m => !getUserByMember(m.id));
+  const configWarning = !CONFIGURED ? `<div class="err-msg">This copy isn't connected to a Supabase project yet — open the file and fill in SUPABASE_URL / SUPABASE_ANON_KEY at the top of the &lt;script&gt;. See SETUP.md.</div>` : '';
   const html = `
-  <div class="auth-wrap">
-    <div class="auth-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-        <svg viewBox="0 0 40 40" width="34" height="34" fill="none">
-          <path d="M20 36V18" stroke="#B07F2C" stroke-width="2" stroke-linecap="round"/>
-          <path d="M20 24C20 24 12 22 10 14" stroke="#2E5136" stroke-width="2" stroke-linecap="round"/>
-          <path d="M20 20C20 20 28 18 30 10" stroke="#2E5136" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="20" cy="14" r="3.4" fill="#B07F2C"/>
-          <circle cx="9" cy="12" r="2.6" fill="#7C9C87"/>
-          <circle cx="31" cy="8" r="2.6" fill="#7C9C87"/>
-        </svg>
-        <h1 style="font-size:1.5rem;">Rootline</h1>
-      </div>
-      <p class="hint" style="margin-bottom:20px;">A shared ledger where your family records its branches, chats, and asks each other to confirm how you're related.</p>
-      <div class="auth-tabs">
-        <button class="auth-tab ${authTab==='login'?'active':''}" data-authtab="login">Log in</button>
-        <button class="auth-tab ${authTab==='register'?'active':''}" data-authtab="register">Join the family</button>
-      </div>
-      ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
-      ${authTab==='login' ? `
-        <form data-form="login">
-          <div class="field"><label>Username</label><input name="username" required autocomplete="username"/></div>
-          <div class="field"><label>Password</label><input name="password" type="password" required autocomplete="current-password"/></div>
-          <button class="btn btn-primary" style="width:100%;" type="submit">Log in</button>
-        </form>
-      ` : `
-        <form data-form="register">
-          <div class="field"><label>Choose a username</label><input name="username" required/></div>
-          <div class="field"><label>Choose a password</label><input name="password" type="password" required minlength="4"/></div>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="regmode" value="new" ${regMode==='new'?'checked':''} data-regmode/> Create my profile</label>
-            <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${regMode==='claim'?'checked':''} data-regmode ${unclaimed.length===0?'disabled':''}/> Claim an existing profile</label>
-          </div>
-          ${regMode==='new' ? `
-            <div class="row">
-              <div class="col field"><label>First name</label><input name="first" required/></div>
-              <div class="col field"><label>Last name</label><input name="last" required/></div>
-            </div>
-            <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
-          ` : `
-            <div class="field">
-              <label>Which profile is you?</label>
-              <select name="claimId" required>
-                ${unclaimed.length ? unclaimed.map(m=>`<option value="${m.id}">${esc(fullName(m))} ${m.birthYear?('('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles yet</option>'}
-              </select>
-              <div class="hint">These are profiles a relative already added to the tree but hasn't linked to an account yet.</div>
-            </div>
-          `}
-          <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create account</button>
-        </form>
-      `}
-      <p class="hint" style="margin-top:16px;">This is a shared family space — names, relations and chat here are visible to everyone who has this ledger's link, so only share it with your family.</p>
+  <div class="auth-wrap"><div class="auth-card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <svg viewBox="0 0 40 40" width="34" height="34" fill="none">
+        <path d="M20 36V18" stroke="#B07F2C" stroke-width="2" stroke-linecap="round"/>
+        <path d="M20 24C20 24 12 22 10 14" stroke="#2E5136" stroke-width="2" stroke-linecap="round"/>
+        <path d="M20 20C20 20 28 18 30 10" stroke="#2E5136" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="20" cy="14" r="3.4" fill="#B07F2C"/><circle cx="9" cy="12" r="2.6" fill="#7C9C87"/><circle cx="31" cy="8" r="2.6" fill="#7C9C87"/>
+      </svg>
+      <h1 style="font-size:1.5rem;">Rootline</h1>
     </div>
-  </div>`;
+    <p class="hint" style="margin-bottom:20px;">A shared ledger where your family records its branches, chats, and asks each other to confirm how you're related.</p>
+    ${configWarning}
+    <div class="auth-tabs">
+      <button class="auth-tab ${authTab==='login'?'active':''}" data-authtab="login">Log in</button>
+      <button class="auth-tab ${authTab==='register'?'active':''}" data-authtab="register">Join the family</button>
+    </div>
+    ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
+    ${authTab==='login' ? `
+      <form data-form="login">
+        <div class="field"><label>Username</label><input name="username" required autocomplete="username"/></div>
+        <div class="field"><label>Password</label><input name="password" type="password" required autocomplete="current-password"/></div>
+        <button class="btn btn-primary" style="width:100%;" type="submit">Log in</button>
+      </form>` : `
+      <form data-form="register">
+        <div class="field"><label>Choose a username</label><input name="username" required/></div>
+        <div class="field"><label>Choose a password</label><input name="password" type="password" required minlength="6"/></div>
+        <div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="regmode" value="new" ${regMode==='new'?'checked':''} data-regmode/> Create my profile</label>
+          <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${regMode==='claim'?'checked':''} data-regmode ${unclaimed.length===0?'disabled':''}/> Claim an existing profile</label>
+        </div>
+        ${regMode==='new' ? `
+          <div class="row">
+            <div class="col field"><label>First name</label><input name="first" required/></div>
+            <div class="col field"><label>Last name</label><input name="last" required/></div>
+          </div>
+          <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
+        ` : `
+          <div class="field"><label>Which profile is you?</label>
+            <select name="claimId" required>
+              ${unclaimed.length ? unclaimed.map(m=>`<option value="${m.id}">${esc(fullName(m))} ${m.birthYear?('('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles yet</option>'}
+            </select>
+          </div>`}
+        <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create account</button>
+      </form>`}
+    <p class="hint" style="margin-top:16px;">Your username becomes a private login address behind the scenes — you never need to see or share it as an email.</p>
+  </div></div>`;
   document.getElementById('root').innerHTML = html;
 }
 
-/* ============================= RENDER: TREE ============================= */
+/* ============================= TREE ============================= */
 function renderTree(){
   const members = DB.members;
   let body;
@@ -461,135 +343,100 @@ function renderTree(){
   } else {
     const parentEdges = acceptedEdges('parent-of');
     const spouseEdges = acceptedEdges('spouse-of');
-    const level = {};
-    members.forEach(m=>level[m.id]=0);
+    const level = {}; members.forEach(m=>level[m.id]=0);
     for(let i=0;i<members.length+2;i++){
       let changed=false;
-      parentEdges.forEach(e=>{
-        if(level[e.bId] < level[e.aId]+1){ level[e.bId]=level[e.aId]+1; changed=true; }
-      });
+      parentEdges.forEach(e=>{ if(level[e.bId] < level[e.aId]+1){ level[e.bId]=level[e.aId]+1; changed=true; } });
       if(!changed) break;
     }
     const byLevel = {};
-    members.forEach(m=>{ (byLevel[level[m.id]] = byLevel[level[m.id]]||[]).push(m); });
-    // nudge spouses adjacent within a level
+    members.forEach(m=>{ (byLevel[level[m.id]]=byLevel[level[m.id]]||[]).push(m); });
     Object.values(byLevel).forEach(arr=>{
       spouseEdges.forEach(e=>{
-        const ia = arr.findIndex(m=>m.id===e.aId), ib = arr.findIndex(m=>m.id===e.bId);
-        if(ia>-1 && ib>-1 && Math.abs(ia-ib)!==1){
-          const item = arr.splice(ib,1)[0];
-          arr.splice(ia+1,0,item);
-        }
+        const ia=arr.findIndex(m=>m.id===e.aId), ib=arr.findIndex(m=>m.id===e.bId);
+        if(ia>-1 && ib>-1 && Math.abs(ia-ib)!==1){ const item=arr.splice(ib,1)[0]; arr.splice(ia+1,0,item); }
       });
     });
     const levels = Object.keys(byLevel).map(Number).sort((a,b)=>a-b);
-    const colW = 168, rowH = 150, padTop = 46, padSide = 70;
+    const colW=168, rowH=150, padTop=46, padSide=70;
     const maxCount = Math.max(...levels.map(l=>byLevel[l].length));
-    const width = Math.max(760, maxCount*colW + padSide*2);
-    const height = levels.length*rowH + padTop + 60;
+    const width = Math.max(760, maxCount*colW+padSide*2);
+    const height = levels.length*rowH+padTop+60;
     const pos = {};
     levels.forEach(l=>{
-      const arr = byLevel[l];
-      const totalW = arr.length*colW;
-      const startX = (width-totalW)/2 + colW/2;
-      arr.forEach((m,i)=>{ pos[m.id] = {x:startX+i*colW, y:padTop + l*rowH}; });
+      const arr=byLevel[l]; const totalW=arr.length*colW; const startX=(width-totalW)/2+colW/2;
+      arr.forEach((m,i)=>{ pos[m.id]={x:startX+i*colW, y:padTop+l*rowH}; });
     });
-
     let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
     parentEdges.forEach(e=>{
-      const p = pos[e.aId], c = pos[e.bId];
-      if(!p||!c) return;
-      const midY = (p.y+c.y)/2;
+      const p=pos[e.aId], c=pos[e.bId]; if(!p||!c) return;
+      const midY=(p.y+c.y)/2;
       svg += `<path d="M ${p.x} ${p.y+22} C ${p.x} ${midY}, ${c.x} ${midY}, ${c.x} ${c.y-22}" stroke="#2E5136" stroke-width="2" fill="none" opacity="0.75"/>`;
       svg += `<circle cx="${(p.x+c.x)/2}" cy="${midY}" r="2.6" fill="#B07F2C"/>`;
     });
     spouseEdges.forEach(e=>{
-      const a = pos[e.aId], b = pos[e.bId];
-      if(!a||!b) return;
+      const a=pos[e.aId], b=pos[e.bId]; if(!a||!b) return;
       svg += `<line x1="${a.x+24}" y1="${a.y}" x2="${b.x-24}" y2="${b.y}" stroke="#7C9C87" stroke-width="2" stroke-dasharray="4 3"/>`;
     });
     members.forEach(m=>{
-      const p = pos[m.id]; if(!p) return;
-      const col = colorFor(m.id);
-      svg += `<g>
-        <circle cx="${p.x}" cy="${p.y}" r="24" fill="${col}"/>
+      const p=pos[m.id]; if(!p) return; const col=colorFor(m.id);
+      svg += `<g><circle cx="${p.x}" cy="${p.y}" r="24" fill="${col}"/>
         <text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="#fff" font-family="Fraunces, serif" font-size="14" font-weight="700">${esc(initials(m))}</text>
         <text x="${p.x}" y="${p.y+42}" text-anchor="middle" fill="#20291F" font-family="'Source Sans 3', sans-serif" font-size="12" font-weight="700">${esc(fullName(m))}</text>
-        <text x="${p.x}" y="${p.y+56}" text-anchor="middle" fill="#6b6355" font-family="'IBM Plex Mono', monospace" font-size="10">${esc(fmtYear(m))}</text>
-      </g>`;
+        <text x="${p.x}" y="${p.y+56}" text-anchor="middle" fill="#6b6355" font-family="'IBM Plex Mono', monospace" font-size="10">${esc(fmtYear(m))}</text></g>`;
     });
     svg += `</svg>`;
     body = `<div class="tree-scroll">${svg}</div>
       <div class="tree-legend">
         <span><span class="legend-swatch" style="background:#2E5136;"></span> Parent → child</span>
-        <span><span class="legend-swatch" style="background:#7C9C87; background-image:repeating-linear-gradient(to right, #7C9C87 0 4px, transparent 4px 7px);"></span> Spouse / partner</span>
+        <span><span class="legend-swatch" style="background-image:repeating-linear-gradient(to right, #7C9C87 0 4px, transparent 4px 7px);"></span> Spouse / partner</span>
       </div>`;
   }
-  return `
-    <div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} recorded</div>
-    <h1>The family tree</h1>
-    <p class="hint">Confirmed relations only — proposed ones show up under Requests until accepted.</p>
-    ${branchRule()}
-    ${body}
-  `;
+  return `<div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} recorded</div>
+    <h1>The family tree</h1><p class="hint">Confirmed relations only — proposed ones show up under Requests until accepted.</p>
+    ${branchRule()}${body}`;
 }
 
-/* ============================= RENDER: ADD MEMBER ============================= */
+/* ============================= ADD MEMBER ============================= */
 function renderAddMember(){
-  return `
-    <div class="eyebrow">Record a relative</div>
-    <h1>Add a family member</h1>
+  return `<div class="eyebrow">Record a relative</div><h1>Add a family member</h1>
     <p class="hint">Add anyone in the family — living or passed, whether or not they'll ever log in themselves.</p>
     ${branchRule()}
-    <div class="row">
-      <div class="col">
-        <form data-form="add-member">
-          <div class="row">
-            <div class="col field"><label>First name</label><input name="first" required/></div>
-            <div class="col field"><label>Last name</label><input name="last" required/></div>
-          </div>
-          <div class="row">
-            <div class="col field"><label>Gender</label>
-              <select name="gender"><option value="">Unspecified</option><option>Female</option><option>Male</option><option>Other</option></select>
-            </div>
-            <div class="col field"><label>Birth year</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
-            <div class="col field"><label>Death year (if applicable)</label><input name="deathYear" type="number" min="1600" max="2100"/></div>
-          </div>
-          <div class="field"><label>Notes / bio</label><textarea name="bio" rows="3" placeholder="Anything worth remembering about them..."></textarea></div>
-          <button class="btn btn-primary" type="submit">Add to the ledger</button>
-        </form>
-      </div>
-      <div class="col">
-        <div class="card" style="background:#fff;">
-          <h3 style="font-size:1rem;">What happens next?</h3>
-          <p class="hint">This person is added as an unclaimed profile. You can immediately add a relation for them under <b>Add Relation</b>. If they join Rootline later, they can claim this profile during registration.</p>
+    <div class="row"><div class="col">
+      <form data-form="add-member">
+        <div class="row">
+          <div class="col field"><label>First name</label><input name="first" required/></div>
+          <div class="col field"><label>Last name</label><input name="last" required/></div>
         </div>
-      </div>
-    </div>
-  `;
+        <div class="row">
+          <div class="col field"><label>Gender</label><select name="gender"><option value="">Unspecified</option><option>Female</option><option>Male</option><option>Other</option></select></div>
+          <div class="col field"><label>Birth year</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
+          <div class="col field"><label>Death year (if applicable)</label><input name="deathYear" type="number" min="1600" max="2100"/></div>
+        </div>
+        <div class="field"><label>Notes / bio</label><textarea name="bio" rows="3" placeholder="Anything worth remembering about them..."></textarea></div>
+        <button class="btn btn-primary" type="submit">Add to the ledger</button>
+      </form>
+    </div><div class="col">
+      <div class="card" style="background:#fff;"><h3 style="font-size:1rem;">What happens next?</h3>
+      <p class="hint">This person is added as an unclaimed profile. You can immediately add a relation for them under <b>Add Relation</b>. If they join Rootline later, they can claim this profile during registration.</p></div>
+    </div></div>`;
 }
 
-/* ============================= RENDER: ADD RELATION ============================= */
+/* ============================= ADD RELATION ============================= */
 function renderAddRelation(){
   const mine = ownedMemberOptions();
   const others = DB.members;
   const defYour = addRelationDefaults?.your || session.user.memberId || (mine[0] && mine[0].id) || '';
   const defOther = addRelationDefaults?.other || '';
   const defType = addRelationDefaults?.type || 'parent';
-  return `
-    <div class="eyebrow">Link two branches</div>
-    <h1>Add a relation</h1>
+  return `<div class="eyebrow">Link two branches</div><h1>Add a relation</h1>
     <p class="hint">If the other person has their own account, this will wait in their Requests tab for confirmation.</p>
     ${branchRule()}
     <form data-form="add-relation" style="max-width:640px;">
-      <div class="field">
-        <label>This is about</label>
-        <select name="your">
-          ${mine.map(m=>`<option value="${m.id}" ${m.id===defYour?'selected':''}>${m.id===session.user.memberId?'Me — ':''}${esc(fullName(m))}</option>`).join('')}
-        </select>
+      <div class="field"><label>This is about</label>
+        <select name="your">${mine.map(m=>`<option value="${m.id}" ${m.id===defYour?'selected':''}>${m.id===session.user.memberId?'Me — ':''}${esc(fullName(m))}</option>`).join('')}</select>
       </div>
-      <div class="field">
-        <label>Relation</label>
+      <div class="field"><label>Relation</label>
         <select name="type">
           <option value="parent" ${defType==='parent'?'selected':''}>...has this parent</option>
           <option value="child" ${defType==='child'?'selected':''}>...has this child</option>
@@ -597,8 +444,7 @@ function renderAddRelation(){
           <option value="sibling" ${defType==='sibling'?'selected':''}>...is the sibling of</option>
         </select>
       </div>
-      <div class="field">
-        <label>Other family member</label>
+      <div class="field"><label>Other family member</label>
         <select name="other" required>
           <option value="">Select a person…</option>
           ${others.map(m=>`<option value="${m.id}" ${m.id===defOther?'selected':''}>${esc(fullName(m))} ${fmtYear(m)?('— '+fmtYear(m)):''}</option>`).join('')}
@@ -606,106 +452,72 @@ function renderAddRelation(){
         <div class="hint">Don't see them? <button type="button" class="btn btn-outline btn-sm" data-nav="members" style="margin-top:6px;">Add a new member</button></div>
       </div>
       <button class="btn btn-primary" type="submit">Propose this relation</button>
-    </form>
-  `;
+    </form>`;
 }
 
-/* ============================= RENDER: ANCESTORS ============================= */
+/* ============================= ANCESTORS ============================= */
 function renderAncestors(){
   const options = DB.members;
   const sel = ancestorFor || (options[0] && options[0].id) || '';
-  let body = '';
-  if(!sel){
-    body = emptyState('🧬','No members yet','Add family members first, then come back to trace their ancestry.');
-  } else {
+  let body='';
+  if(!sel){ body = emptyState('🧬','No members yet','Add family members first, then come back to trace their ancestry.'); }
+  else{
     const gens = ancestorsOf(sel);
-    if(gens.length===0){
-      body = emptyState('🌱','No ancestors recorded', fullName(getMember(sel)) + "'s parents haven't been recorded yet. Add a relation to build this out.");
-    } else {
-      const labels = ['Parents','Grandparents','Great-grandparents'];
+    if(gens.length===0){ body = emptyState('🌱','No ancestors recorded', fullName(getMember(sel)) + "'s parents haven't been recorded yet. Add a relation to build this out."); }
+    else{
+      const labels=['Parents','Grandparents','Great-grandparents'];
       body = gens.map((gen,i)=>{
         const label = labels[i] || `${'Great-'.repeat(i-1)}Great-grandparents`;
-        return `<div style="margin-bottom:20px;">
-          <div class="eyebrow">Generation ${i+1}</div>
-          <h3 style="font-size:1.05rem;">${label}</h3>
-          <div class="member-grid">
-            ${gen.map(id=>memberCardHTML(getMember(id))).join('')}
-          </div>
-        </div>`;
+        return `<div style="margin-bottom:20px;"><div class="eyebrow">Generation ${i+1}</div><h3 style="font-size:1.05rem;">${label}</h3>
+          <div class="member-grid">${gen.map(id=>memberCardHTML(getMember(id))).join('')}</div></div>`;
       }).join('');
     }
   }
-  return `
-    <div class="eyebrow">Trace a lineage</div>
-    <h1>Ancestors</h1>
-    ${branchRule()}
-    <div class="field" style="max-width:360px;">
-      <label>Show ancestors of</label>
-      <select data-change="ancestor-select">
-        ${options.map(m=>`<option value="${m.id}" ${m.id===sel?'selected':''}>${esc(fullName(m))}</option>`).join('')}
-      </select>
-    </div>
-    <div style="margin-top:22px;">${body}</div>
-  `;
+  return `<div class="eyebrow">Trace a lineage</div><h1>Ancestors</h1>${branchRule()}
+    <div class="field" style="max-width:360px;"><label>Show ancestors of</label>
+      <select data-change="ancestor-select">${options.map(m=>`<option value="${m.id}" ${m.id===sel?'selected':''}>${esc(fullName(m))}</option>`).join('')}</select>
+    </div><div style="margin-top:22px;">${body}</div>`;
 }
 
-/* ============================= RENDER: SEARCH ============================= */
+/* ============================= SEARCH ============================= */
 function memberCardHTML(m){
   if(!m) return '';
   const relCount = DB.relations.filter(r=>r.status==='accepted' && (r.aId===m.id||r.bId===m.id)).length;
   const owner = getUserByMember(m.id);
-  return `<div class="member-card">
-    <div class="avatar" style="background:${colorFor(m.id)};">${esc(initials(m))}</div>
-    <div>
-      <div class="member-name">${esc(fullName(m))}</div>
-      <div class="member-meta">${esc(fmtYear(m)) || '&nbsp;'}</div>
-      <div class="member-meta">${m.gender||''}</div>
-      <span class="member-tag">${relCount} relation${relCount===1?'':'s'}</span>
-      ${!owner ? `<span class="member-tag" style="background:#F3E3C4;color:#7a5a12;">unclaimed</span>` : ''}
-    </div>
-  </div>`;
+  return `<div class="member-card"><div class="avatar" style="background:${colorFor(m.id)};">${esc(initials(m))}</div>
+    <div><div class="member-name">${esc(fullName(m))}</div>
+    <div class="member-meta">${esc(fmtYear(m)) || '&nbsp;'}</div><div class="member-meta">${m.gender||''}</div>
+    <span class="member-tag">${relCount} relation${relCount===1?'':'s'}</span>
+    ${!owner ? `<span class="member-tag" style="background:#F3E3C4;color:#7a5a12;">unclaimed</span>` : ''}
+    </div></div>`;
 }
 function renderSearch(){
   const q = searchQuery.trim().toLowerCase();
   const results = DB.members.filter(m => !q || fullName(m).toLowerCase().includes(q));
-  return `
-    <div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} in the ledger</div>
-    <h1>Search members</h1>
-    ${branchRule()}
-    <div class="field" style="max-width:420px;">
-      <label>Name or surname</label>
-      <input data-change="search-input" placeholder="Type name or surname…" value="${esc(searchQuery)}"/>
-    </div>
-    ${results.length ? `<div class="member-grid">${results.map(memberCardHTML).join('')}</div>` : emptyState('🔍','No matches', q ? `Nobody in the ledger matches "${searchQuery}".` : 'No family members recorded yet.')}
-  `;
+  return `<div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} in the ledger</div><h1>Search members</h1>${branchRule()}
+    <div class="field" style="max-width:420px;"><label>Name or surname</label>
+      <input data-change="search-input" placeholder="Type name or surname…" value="${esc(searchQuery)}"/></div>
+    ${results.length ? `<div class="member-grid">${results.map(memberCardHTML).join('')}</div>` : emptyState('🔍','No matches', q ? `Nobody in the ledger matches "${searchQuery}".` : 'No family members recorded yet.')}`;
 }
 
-/* ============================= RENDER: CHAT ============================= */
+/* ============================= CHAT ============================= */
 function renderChat(){
   const msgs = [...DB.chat].sort((a,b)=>a.ts-b.ts);
-  return `
-    <div class="eyebrow">Everyone in the family can see this</div>
-    <h1>Family chat</h1>
-    ${branchRule()}
+  return `<div class="eyebrow">Everyone in the family can see this</div><h1>Family chat</h1>${branchRule()}
     <div class="chat-window" id="chat-window">
-      ${msgs.length ? msgs.map(m=>`
-        <div class="msg ${m.userId===session.user.id?'mine':'theirs'}">
-          <span class="who">${esc(m.username)}</span>
-          ${esc(m.text)}
-          <span class="ts">${fmtTime(m.ts)}</span>
-        </div>
-      `).join('') : `<div class="hint" style="margin:auto;text-align:center;">No messages yet — say hello to the family 👋</div>`}
+      ${msgs.length ? msgs.map(m=>`<div class="msg ${m.userId===session.user.id?'mine':'theirs'}">
+          <span class="who">${esc(m.username)}</span>${esc(m.text)}<span class="ts">${fmtTime(m.ts)}</span></div>`).join('')
+        : `<div class="hint" style="margin:auto;text-align:center;">No messages yet — say hello to the family 👋</div>`}
     </div>
     <form data-form="chat" class="chat-input-row">
       <input name="text" placeholder="Write a message…" autocomplete="off" required/>
       <button class="btn btn-primary" type="submit">Send</button>
-    </form>
-  `;
+    </form>`;
 }
 
-/* ============================= RENDER: REQUESTS ============================= */
-function relLabel(r, viewerMemberId){
-  const a = getMember(r.aId), b = getMember(r.bId);
+/* ============================= REQUESTS ============================= */
+function relLabel(r){
+  const a=getMember(r.aId), b=getMember(r.bId);
   if(r.type==='parent-of') return `${fullName(a)} is a parent of ${fullName(b)}`;
   if(r.type==='spouse-of') return `${fullName(a)} is married to / partnered with ${fullName(b)}`;
   return `${fullName(a)} is a sibling of ${fullName(b)}`;
@@ -714,98 +526,99 @@ function renderRequests(){
   const incoming = DB.relations.filter(r=>r.status==='pending' && r.approverUserId===session.user.id);
   const outgoing = DB.relations.filter(r=>r.status==='pending' && r.requestedBy===session.user.id && r.approverUserId!==session.user.id);
   const history = DB.relations.filter(r=>r.status!=='pending' && (r.requestedBy===session.user.id || r.approverUserId===session.user.id)).slice(-8).reverse();
-  return `
-    <div class="eyebrow">Confirmations keep the tree accurate</div>
-    <h1>Requests</h1>
-    ${branchRule()}
+  return `<div class="eyebrow">Confirmations keep the tree accurate</div><h1>Requests</h1>${branchRule()}
     <h3>Waiting on you (${incoming.length})</h3>
-    ${incoming.length ? incoming.map(r=>`
-      <div class="req-card">
-        <div>${relLabel(r)} <span class="pill pending">pending</span></div>
-        <div class="req-actions">
-          <button class="btn btn-primary btn-sm" data-action="accept-rel" data-id="${r.id}">Accept</button>
-          <button class="btn btn-danger btn-sm" data-action="decline-rel" data-id="${r.id}">Decline</button>
-        </div>
-      </div>`).join('') : `<p class="hint">Nothing needs your confirmation right now.</p>`}
-
+    ${incoming.length ? incoming.map(r=>`<div class="req-card"><div>${relLabel(r)} <span class="pill pending">pending</span></div>
+      <div class="req-actions"><button class="btn btn-primary btn-sm" data-action="accept-rel" data-id="${r.id}">Accept</button>
+      <button class="btn btn-danger btn-sm" data-action="decline-rel" data-id="${r.id}">Decline</button></div></div>`).join('') : `<p class="hint">Nothing needs your confirmation right now.</p>`}
     <h3 style="margin-top:26px;">Waiting on others (${outgoing.length})</h3>
-    ${outgoing.length ? outgoing.map(r=>`
-      <div class="req-card">
-        <div>${relLabel(r)} <span class="pill pending">pending</span></div>
-      </div>`).join('') : `<p class="hint">You have no proposals awaiting a reply.</p>`}
-
+    ${outgoing.length ? outgoing.map(r=>`<div class="req-card"><div>${relLabel(r)} <span class="pill pending">pending</span></div></div>`).join('') : `<p class="hint">You have no proposals awaiting a reply.</p>`}
     <h3 style="margin-top:26px;">Recent history</h3>
-    ${history.length ? history.map(r=>`
-      <div class="req-card">
-        <div>${relLabel(r)}</div>
-        <span class="pill ${r.status}">${r.status}</span>
-      </div>`).join('') : `<p class="hint">No resolved requests yet.</p>`}
-  `;
+    ${history.length ? history.map(r=>`<div class="req-card"><div>${relLabel(r)}</div><span class="pill ${r.status}">${r.status}</span></div>`).join('') : `<p class="hint">No resolved requests yet.</p>`}`;
 }
 
-/* ============================= RENDER: SUGGESTIONS ============================= */
+/* ============================= SUGGESTIONS ============================= */
 function computeSuggestions(){
-  const out = [];
-  const members = DB.members;
+  const out=[]; const members=DB.members;
   const dismissedKeys = new Set(dismissedSuggestions.filter(d=>d.username===session.user.username).map(d=>d.pairKey));
   for(let i=0;i<members.length;i++){
     for(let j=i+1;j<members.length;j++){
-      const a = members[i], b = members[j];
+      const a=members[i], b=members[j];
       if(!a.last || !b.last) continue;
-      if(a.last.toLowerCase() !== b.last.toLowerCase()) continue;
-      const anyRel = DB.relations.some(r => r.status!=='declined' && ((r.aId===a.id&&r.bId===b.id)||(r.aId===b.id&&r.bId===a.id)));
+      if(a.last.toLowerCase()!==b.last.toLowerCase()) continue;
+      const anyRel = DB.relations.some(r=>r.status!=='declined' && ((r.aId===a.id&&r.bId===b.id)||(r.aId===b.id&&r.bId===a.id)));
       if(anyRel) continue;
-      const key = [a.id,b.id].sort().join('|');
+      const key=[a.id,b.id].sort().join('|');
       if(dismissedKeys.has(key)) continue;
-      out.push({a,b,key});
-      if(out.length>=20) return out;
+      out.push({a,b,key}); if(out.length>=20) return out;
     }
   }
   return out;
 }
 function renderSuggestions(){
   const sugg = computeSuggestions();
-  return `
-    <div class="eyebrow">Based on shared surnames</div>
-    <h1>Suggestions</h1>
-    <p class="hint">Rootline noticed these people share a surname but aren't linked in the tree yet.</p>
-    ${branchRule()}
-    ${sugg.length ? sugg.map(s=>`
-      <div class="req-card">
-        <div>Could <b>${esc(fullName(s.a))}</b> and <b>${esc(fullName(s.b))}</b> be related? They share the surname "${esc(s.a.last)}".</div>
-        <div class="req-actions">
-          <button class="btn btn-primary btn-sm" data-action="propose-suggestion" data-a="${s.a.id}" data-b="${s.b.id}">Propose relation</button>
-          <button class="btn btn-outline btn-sm" data-action="dismiss-suggestion" data-key="${s.key}">Dismiss</button>
-        </div>
-      </div>
-    `).join('') : emptyState('✨','No suggestions right now', 'Add more family members and Rootline will look for likely connections.')}
-  `;
+  return `<div class="eyebrow">Based on shared surnames</div><h1>Suggestions</h1>
+    <p class="hint">Rootline noticed these people share a surname but aren't linked in the tree yet.</p>${branchRule()}
+    ${sugg.length ? sugg.map(s=>`<div class="req-card"><div>Could <b>${esc(fullName(s.a))}</b> and <b>${esc(fullName(s.b))}</b> be related? They share the surname "${esc(s.a.last)}".</div>
+      <div class="req-actions"><button class="btn btn-primary btn-sm" data-action="propose-suggestion" data-a="${s.a.id}" data-b="${s.b.id}">Propose relation</button>
+      <button class="btn btn-outline btn-sm" data-action="dismiss-suggestion" data-key="${s.key}">Dismiss</button></div></div>`).join('')
+      : emptyState('✨','No suggestions right now', 'Add more family members and Rootline will look for likely connections.')}`;
 }
 
 /* ============================= MASTER RENDER ============================= */
 function render(){
-  if(!loaded){
-    document.getElementById('root').innerHTML = `<div class="auth-wrap"><p style="font-family:var(--font-display);font-size:1.2rem;">Opening the ledger…</p></div>`;
-    return;
-  }
-  if(!session.user){
-    renderAuth();
-    return;
-  }
-  let inner = '';
-  if(view==='tree') inner = renderTree();
-  else if(view==='members') inner = renderAddMember();
-  else if(view==='add-relation') inner = renderAddRelation();
-  else if(view==='ancestors') inner = renderAncestors();
-  else if(view==='search') inner = renderSearch();
-  else if(view==='chat') inner = renderChat();
-  else if(view==='requests') inner = renderRequests();
-  else if(view==='suggestions') inner = renderSuggestions();
+  if(!loaded){ document.getElementById('root').innerHTML = `<div class="auth-wrap"><p style="font-family:var(--font-display);font-size:1.2rem;">Opening the ledger…</p></div>`; return; }
+  if(!session.user){ renderAuth(); return; }
+  let inner='';
+  if(view==='tree') inner=renderTree();
+  else if(view==='members') inner=renderAddMember();
+  else if(view==='add-relation') inner=renderAddRelation();
+  else if(view==='ancestors') inner=renderAncestors();
+  else if(view==='search') inner=renderSearch();
+  else if(view==='chat') inner=renderChat();
+  else if(view==='requests') inner=renderRequests();
+  else if(view==='suggestions') inner=renderSuggestions();
   document.getElementById('root').innerHTML = shellHTML(inner);
-  if(view==='chat'){
-    const w = document.getElementById('chat-window');
-    if(w) w.scrollTop = w.scrollHeight;
-  }
+  if(view==='chat'){ const w=document.getElementById('chat-window'); if(w) w.scrollTop=w.scrollHeight; }
+}
+
+/* ============================= DATA LOADING & REALTIME ============================= */
+async function loadAll(){
+  const [mRes, rRes, cRes, pRes] = await Promise.all([
+    supabase.from('members').select('*'),
+    supabase.from('relations').select('*'),
+    supabase.from('chat_messages').select('*').order('created_at',{ascending:true}),
+    supabase.from('profiles').select('*'),
+  ]);
+  DB.members = (mRes.data||[]).map(mapMember);
+  DB.relations = (rRes.data||[]).map(mapRelation);
+  DB.chat = (cRes.data||[]).map(mapChat);
+  DB.users = (pRes.data||[]).map(mapProfile);
+}
+function setupRealtime(){
+  if(realtimeChannel) return;
+  realtimeChannel = supabase.channel('rootline-live')
+    .on('postgres_changes', {event:'*', schema:'public', table:'members'}, payload=>{
+      if(payload.eventType==='DELETE'){ DB.members = DB.members.filter(m=>m.id!==payload.old.id); }
+      else { upsertLocal(DB.members, mapMember(payload.new)); }
+      render();
+    })
+    .on('postgres_changes', {event:'*', schema:'public', table:'relations'}, payload=>{
+      if(payload.eventType==='DELETE'){ DB.relations = DB.relations.filter(r=>r.id!==payload.old.id); }
+      else { upsertLocal(DB.relations, mapRelation(payload.new)); }
+      render();
+    })
+    .on('postgres_changes', {event:'*', schema:'public', table:'chat_messages'}, payload=>{
+      if(payload.eventType==='DELETE'){ DB.chat = DB.chat.filter(m=>m.id!==payload.old.id); }
+      else { upsertLocal(DB.chat, mapChat(payload.new)); }
+      render();
+    })
+    .on('postgres_changes', {event:'*', schema:'public', table:'profiles'}, payload=>{
+      if(payload.eventType==='DELETE'){ DB.users = DB.users.filter(u=>u.id!==payload.old.id); }
+      else { upsertLocal(DB.users, mapProfile(payload.new)); }
+      render();
+    })
+    .subscribe();
 }
 
 /* ============================= EVENT DELEGATION ============================= */
@@ -819,12 +632,13 @@ document.addEventListener('click', async (e)=>{
   const action = e.target.closest('[data-action]');
   if(action){
     const act = action.getAttribute('data-action');
-    if(act==='logout'){ session.user=null; view='tree'; render(); return; }
-
+    if(act==='logout'){ await supabase.auth.signOut(); session.user=null; view='tree'; render(); return; }
     if(act==='accept-rel' || act==='decline-rel'){
       const id = action.getAttribute('data-id');
-      const r = DB.relations.find(x=>x.id===id);
-      if(r){ r.status = act==='accept-rel' ? 'accepted' : 'declined'; await stSet('relations', DB.relations); render(); }
+      const newStatus = act==='accept-rel' ? 'accepted' : 'declined';
+      const {error} = await supabase.from('relations').update({status:newStatus}).eq('id', id);
+      if(!error){ const r = DB.relations.find(x=>x.id===id); if(r) r.status = newStatus; render(); }
+      else alert(error.message);
       return;
     }
     if(act==='propose-suggestion'){
@@ -833,32 +647,22 @@ document.addEventListener('click', async (e)=>{
       const yourId = mine.includes(a) ? a : (mine.includes(b) ? b : a);
       const otherId = yourId===a ? b : a;
       addRelationDefaults = {your:yourId, other:otherId, type:'sibling'};
-      view = 'add-relation';
-      render();
-      return;
+      view = 'add-relation'; render(); return;
     }
     if(act==='dismiss-suggestion'){
       const key = action.getAttribute('data-key');
       dismissedSuggestions.push({username:session.user.username, pairKey:key});
-      render();
-      return;
+      render(); return;
     }
   }
 });
-
 document.addEventListener('change', (e)=>{
   if(e.target.matches('[data-regmode]')){ regMode = e.target.value; render(); return; }
   if(e.target.matches('[data-change="ancestor-select"]')){ ancestorFor = e.target.value; render(); return; }
-  if(e.target.matches('[data-change="search-input"]')){ searchQuery = e.target.value; render(); return; }
 });
 document.addEventListener('input', (e)=>{
-  if(e.target.matches('[data-change="search-input"]')){ searchQuery = e.target.value; renderSearchOnly(); }
+  if(e.target.matches('[data-change="search-input"]')){ searchQuery = e.target.value; const el=document.querySelector('main .container'); if(el) el.innerHTML = renderSearch(); }
 });
-function renderSearchOnly(){
-  // lightweight re-render for the search box so focus isn't lost while typing
-  const el = document.querySelector('main .container');
-  if(el) el.innerHTML = renderSearch();
-}
 
 document.addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -866,79 +670,92 @@ document.addEventListener('submit', async (e)=>{
   if(!form) return;
   const type = form.getAttribute('data-form');
   const data = Object.fromEntries(new FormData(form).entries());
+  const submitBtn = form.querySelector('button[type=submit]');
+  if(submitBtn) submitBtn.disabled = true;
 
-  if(type==='login'){
-    const u = DB.users.find(x=>x.username.toLowerCase()===String(data.username).trim().toLowerCase() && x.password===data.password);
-    if(!u){ authError = 'Username or password not recognised.'; render(); return; }
-    session.user = u; authError=''; view='tree'; render(); return;
-  }
-
-  if(type==='register'){
-    const uname = String(data.username).trim();
-    if(!uname || !data.password){ authError='Please fill in all fields.'; render(); return; }
-    if(DB.users.some(x=>x.username.toLowerCase()===uname.toLowerCase())){ authError='That username is already taken.'; render(); return; }
-    let memberId;
-    if(regMode==='claim'){
-      if(!data.claimId){ authError='Choose a profile to claim.'; render(); return; }
-      memberId = data.claimId;
-    } else {
-      if(!data.first || !data.last){ authError='Please provide a first and last name.'; render(); return; }
-      const m = { id:uid(), first:data.first.trim(), last:data.last.trim(), gender:'', birthYear:data.birthYear?Number(data.birthYear):null, deathYear:null, bio:'', addedBy:null };
-      DB.members.push(m);
-      await stSet('members', DB.members);
-      memberId = m.id;
+  try{
+    if(type==='login'){
+      const {data:signInData, error} = await supabase.auth.signInWithPassword({ email: usernameToEmail(data.username), password: data.password });
+      if(error){ authError = 'Username or password not recognised.'; render(); return; }
+      await loadAll();
+      const profile = DB.users.find(u=>u.id===signInData.user.id);
+      if(!profile){ authError = 'Account found, but no profile is linked to it.'; render(); return; }
+      session.user = profile; authError=''; view='tree'; setupRealtime(); render(); return;
     }
-    const user = { id:uid(), username:uname, password:data.password, memberId };
-    DB.users.push(user);
-    await stSet('users', DB.users);
-    session.user = user; authError=''; view='tree'; regMode='new'; render(); return;
-  }
 
-  if(type==='add-member'){
-    const m = {
-      id:uid(), first:data.first.trim(), last:data.last.trim(), gender:data.gender||'',
-      birthYear:data.birthYear?Number(data.birthYear):null, deathYear:data.deathYear?Number(data.deathYear):null,
-      bio:data.bio||'', addedBy:session.user.id
-    };
-    DB.members.push(m);
-    await stSet('members', DB.members);
-    addRelationDefaults = {your:session.user.memberId, other:m.id, type:'sibling'};
-    view = 'add-relation';
-    render();
-    return;
-  }
+    if(type==='register'){
+      const uname = String(data.username).trim();
+      if(!uname || !data.password){ authError='Please fill in all fields.'; render(); return; }
+      const {data:signUpData, error:signUpErr} = await supabase.auth.signUp({ email: usernameToEmail(uname), password: data.password });
+      if(signUpErr){ authError = signUpErr.message; render(); return; }
+      if(!signUpData.user){ authError = 'Check your email to confirm the account, then log in.'; render(); return; }
+      const authUserId = signUpData.user.id;
 
-  if(type==='add-relation'){
-    if(!data.other){ render(); return; }
-    const res = await createRelation(data.your, data.other, data.type);
-    addRelationDefaults=null;
-    view = 'requests';
-    render();
-    if(!res.ok){ alert(res.msg); }
-    return;
-  }
+      let memberId;
+      if(regMode==='claim'){
+        if(!data.claimId){ authError='Choose a profile to claim.'; render(); return; }
+        memberId = data.claimId;
+      } else {
+        if(!data.first || !data.last){ authError='Please provide a first and last name.'; render(); return; }
+        const {data:m, error:merr} = await supabase.from('members').insert({
+          first:data.first.trim(), last:data.last.trim(), birth_year:data.birthYear?Number(data.birthYear):null, added_by:authUserId
+        }).select().single();
+        if(merr){ authError = merr.message; render(); return; }
+        upsertLocal(DB.members, mapMember(m));
+        memberId = m.id;
+      }
+      const {data:p, error:perr} = await supabase.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
+      if(perr){ authError = perr.message; render(); return; }
+      upsertLocal(DB.users, mapProfile(p));
+      session.user = mapProfile(p); authError=''; view='tree'; regMode='new'; setupRealtime(); render(); return;
+    }
 
-  if(type==='chat'){
-    const msg = { id:uid(), userId:session.user.id, username:session.user.username, text:data.text.trim(), ts:Date.now() };
-    if(!msg.text) return;
-    DB.chat.push(msg);
-    await stSet('chat', DB.chat);
-    form.reset();
-    render();
-    return;
+    if(type==='add-member'){
+      const {data:m, error} = await supabase.from('members').insert({
+        first:data.first.trim(), last:data.last.trim(), gender:data.gender||'',
+        birth_year:data.birthYear?Number(data.birthYear):null, death_year:data.deathYear?Number(data.deathYear):null,
+        bio:data.bio||'', added_by:session.user.id
+      }).select().single();
+      if(error){ alert(error.message); return; }
+      upsertLocal(DB.members, mapMember(m));
+      addRelationDefaults = {your:session.user.memberId, other:m.id, type:'sibling'};
+      view='add-relation'; render(); return;
+    }
+
+    if(type==='add-relation'){
+      if(!data.other){ render(); return; }
+      const res = await createRelation(data.your, data.other, data.type);
+      addRelationDefaults=null; view='requests'; render();
+      if(!res.ok) alert(res.msg);
+      return;
+    }
+
+    if(type==='chat'){
+      const text = data.text.trim(); if(!text) return;
+      const {data:msg, error} = await supabase.from('chat_messages').insert({ user_id:session.user.id, username:session.user.username, text }).select().single();
+      if(error){ alert(error.message); return; }
+      upsertLocal(DB.chat, mapChat(msg));
+      form.reset(); render(); return;
+    }
+  } finally {
+    if(submitBtn) submitBtn.disabled = false;
   }
 });
 
 /* ============================= INIT ============================= */
 (async function init(){
-  const [users, members, relations, chat] = await Promise.all([
-    stGet('users'), stGet('members'), stGet('relations'), stGet('chat')
-  ]);
-  DB.users = users || [];
-  DB.members = members || [];
-  DB.relations = relations || [];
-  DB.chat = chat || [];
+  if(!CONFIGURED){
+    loaded = true;
+    render();
+    return;
+  }
+  const {data:{session:sbSession}} = await supabase.auth.getSession();
+  await loadAll();
   loaded = true;
+  if(sbSession){
+    const profile = DB.users.find(u=>u.id===sbSession.user.id);
+    if(profile){ session.user = profile; setupRealtime(); }
+  }
   render();
 })();
 </script>
