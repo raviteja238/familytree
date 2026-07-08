@@ -3,2002 +3,944 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KinTree – Family & Friends Network</title>
+<title>Rootline — A Family Ledger</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-  :root {
-    --bg: #0d0f14;
-    --bg2: #13161d;
-    --bg3: #1a1e28;
-    --surface: #1e2330;
-    --surface2: #252b3a;
-    --border: #2a3045;
-    --border2: #323a52;
-    --accent: #c9a96e;
-    --accent2: #e8c98a;
-    --text: #e8e4dc;
-    --text2: #9ba0b0;
-    --text3: #6b7080;
-    --green: #4caf82;
-    --blue: #5b8ef0;
-    --pink: #e06b8f;
-    --purple: #9b7fe8;
-    --red: #e05b5b;
-    --family-color: #c9a96e;
-    --friend-color: #5b8ef0;
-    --radius: 12px;
-    --radius-lg: 18px;
-    --transition: 0.2s ease;
-  }
+:root{
+  --ink:#20291F;
+  --paper:#EDE3CE;
+  --paper-card:#FBF7EC;
+  --pine:#2E5136;
+  --pine-dark:#1B3220;
+  --brass:#B07F2C;
+  --brass-light:#DDB05B;
+  --line:#CDBD98;
+  --rust:#A05A3E;
+  --sage:#7C9C87;
+  --font-display:'Fraunces', serif;
+  --font-body:'Source Sans 3', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-body);
+  background:var(--paper);
+  color:var(--ink);
+  min-height:100vh;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(46,81,54,0.05) 1px, transparent 0);
+  background-size:22px 22px;
+}
+h1,h2,h3{font-family:var(--font-display); margin:0 0 6px 0; font-weight:600; color:var(--pine-dark);}
+p{line-height:1.55;}
+a{color:inherit;}
+button{font-family:var(--font-body); cursor:pointer;}
+input,select,textarea{
+  font-family:var(--font-body);
+  font-size:0.95rem;
+  padding:10px 12px;
+  border:1.5px solid var(--line);
+  border-radius:6px;
+  background:#fff;
+  color:var(--ink);
+  width:100%;
+}
+input:focus,select:focus,textarea:focus{
+  outline:2px solid var(--brass-light);
+  outline-offset:1px;
+  border-color:var(--brass);
+}
+label{font-size:0.82rem; font-weight:600; letter-spacing:.02em; color:var(--pine-dark); display:block; margin-bottom:5px; text-transform:uppercase;}
+.field{margin-bottom:16px;}
+.hint{font-size:0.8rem; color:#6b6355; margin-top:4px;}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ---------- signature branch divider ---------- */
+.branch-rule{width:100%; height:22px; margin:14px 0 22px;}
+.branch-rule svg{width:100%; height:100%; display:block;}
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:10px 18px; border-radius:7px; font-weight:600; font-size:0.9rem;
+  border:1.5px solid transparent; transition:transform .12s ease, box-shadow .12s ease;
+}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:var(--pine); color:#F6F1E4; border-color:var(--pine);}
+.btn-primary:hover{background:var(--pine-dark);}
+.btn-outline{background:transparent; color:var(--brass); border-color:var(--brass);}
+.btn-outline:hover{background:rgba(176,127,44,0.1);}
+.btn-danger{background:transparent; color:var(--rust); border-color:var(--rust);}
+.btn-danger:hover{background:rgba(160,90,62,0.1);}
+.btn-sm{padding:6px 12px; font-size:0.8rem;}
+.btn[disabled]{opacity:.45; cursor:not-allowed;}
 
-  /* ─── AUTH SCREEN ─── */
-  #auth-screen {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(ellipse at 30% 20%, #1e2238 0%, #0d0f14 60%);
-    position: relative;
-    overflow: hidden;
-  }
-  #auth-screen::before {
-    content: '';
-    position: absolute;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(201,169,110,0.07) 0%, transparent 70%);
-    top: -100px; left: -100px;
-    pointer-events: none;
-  }
-  #auth-screen::after {
-    content: '';
-    position: absolute;
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(91,142,240,0.07) 0%, transparent 70%);
-    bottom: -50px; right: 50px;
-    pointer-events: none;
-  }
-  .auth-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 48px 40px;
-    width: 420px;
-    max-width: 95vw;
-    position: relative;
-    z-index: 1;
-  }
-  .auth-logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 36px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: -1px;
-    margin-bottom: 6px;
-  }
-  .auth-tagline {
-    font-size: 14px;
-    color: var(--text3);
-    margin-bottom: 36px;
-  }
-  .auth-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 24px 0;
-    color: var(--text3);
-    font-size: 13px;
-  }
-  .auth-divider::before, .auth-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-  .btn {
-    width: 100%;
-    padding: 12px 20px;
-    border-radius: var(--radius);
-    border: none;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-  }
-  .btn-google {
-    background: #fff;
-    color: #333;
-    border: 1px solid #ddd;
-  }
-  .btn-google:hover { background: #f5f5f5; }
-  .btn-primary {
-    background: var(--accent);
-    color: #0d0f14;
-    font-weight: 600;
-  }
-  .btn-primary:hover { background: var(--accent2); }
-  .btn-secondary {
-    background: var(--surface2);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover { background: var(--border); }
+/* ---------- app shell ---------- */
+.app-shell{display:flex; min-height:100vh; align-items:stretch;}
+.sidebar{
+  width:232px; flex-shrink:0; background:var(--pine-dark); color:#EFE7D2;
+  display:flex; flex-direction:column; padding:26px 0 18px;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+.brand{padding:0 22px 22px; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.12); margin-bottom:14px;}
+.brand svg{width:30px; height:30px; flex-shrink:0;}
+.brand-text .t1{font-family:var(--font-display); font-size:1.28rem; line-height:1.1;}
+.brand-text .t2{font-size:0.68rem; letter-spacing:.06em; text-transform:uppercase; opacity:.65;}
 
-  input[type="email"], input[type="password"], input[type="text"], input[type="date"], select, textarea {
-    width: 100%;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 11px 14px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    outline: none;
-    transition: border-color var(--transition);
-    margin-bottom: 12px;
-  }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-  input::placeholder { color: var(--text3); }
-  label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 5px; }
-  .form-group { margin-bottom: 4px; }
+.navlist{display:flex; flex-direction:column; gap:2px; padding:0 10px; flex:1;}
+.navbtn{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  background:transparent; border:none; color:#EFE7D2; padding:11px 14px;
+  border-radius:8px 3px 3px 8px; font-size:0.92rem; font-weight:500;
+}
+.navbtn:hover{background:rgba(255,255,255,0.08);}
+.navbtn.active{background:var(--paper-card); color:var(--pine-dark); font-weight:700; box-shadow:inset 3px 0 0 var(--brass);}
+.navbtn .ic{width:18px; text-align:center;}
+.badge{
+  margin-left:auto; background:var(--rust); color:#fff; font-size:0.68rem; font-weight:700;
+  border-radius:20px; padding:1px 7px; min-width:18px; text-align:center;
+}
 
-  .auth-toggle {
-    text-align: center;
-    margin-top: 20px;
-    font-size: 13px;
-    color: var(--text3);
-  }
-  .auth-toggle a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.sidebar-foot{padding:14px 22px 0; border-top:1px solid rgba(255,255,255,0.12); margin-top:10px;}
+.who{font-size:0.85rem; margin-bottom:8px; opacity:.9;}
+.who b{display:block; font-family:var(--font-display); font-size:1rem;}
 
-  /* ─── MAIN LAYOUT ─── */
-  #app { display: none; height: 100vh; overflow: hidden; }
-  .app-layout {
-    display: grid;
-    grid-template-columns: 240px 1fr;
-    grid-template-rows: 56px 1fr;
-    height: 100vh;
-  }
+main{flex:1; padding:38px 44px; min-width:0;}
+.card{
+  background:var(--paper-card); border-radius:6px; padding:30px 34px;
+  box-shadow:0 1px 0 rgba(0,0,0,0.03), 0 10px 26px -18px rgba(27,50,32,0.35);
+  border:1px solid rgba(0,0,0,0.04);
+}
+.eyebrow{font-family:var(--font-mono); font-size:0.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); margin-bottom:6px;}
+.container{max-width:1080px; margin:0 auto;}
+.row{display:flex; gap:24px; flex-wrap:wrap;}
+.col{flex:1; min-width:240px;}
 
-  /* ─── TOPBAR ─── */
-  .topbar {
-    grid-column: 1 / -1;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    gap: 16px;
-    z-index: 10;
-  }
-  .topbar-logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: -0.5px;
-    margin-right: 8px;
-  }
-  .topbar-search {
-    flex: 1;
-    max-width: 360px;
-    position: relative;
-  }
-  .topbar-search input {
-    margin: 0;
-    padding-left: 36px;
-    background: var(--bg3);
-    font-size: 13px;
-  }
-  .topbar-search-icon {
-    position: absolute;
-    left: 11px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text3);
-    font-size: 14px;
-  }
-  .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-  .avatar {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-  .avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .notif-btn {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text2);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    transition: var(--transition);
-  }
-  .notif-btn:hover { background: var(--surface2); }
+/* ---------- auth screen ---------- */
+.auth-wrap{
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:30px;
+}
+.auth-card{
+  max-width:440px; width:100%; background:var(--paper-card); border-radius:8px;
+  padding:38px 38px 32px; box-shadow:0 30px 60px -30px rgba(27,50,32,0.45);
+  border:1px solid rgba(0,0,0,0.05); position:relative; overflow:hidden;
+}
+.auth-tabs{display:flex; gap:6px; margin-bottom:22px; background:var(--paper); border-radius:8px; padding:4px;}
+.auth-tab{flex:1; text-align:center; padding:9px; border-radius:6px; border:none; background:transparent; font-weight:600; color:#77705f;}
+.auth-tab.active{background:var(--pine); color:#F6F1E4;}
+.radio-group{display:flex; gap:14px; margin-bottom:14px;}
+.radio-opt{display:flex; align-items:center; gap:6px; font-size:0.88rem;}
+.radio-opt input{width:auto;}
+.err-msg{background:#F6E4DC; border:1px solid var(--rust); color:#7a3721; padding:9px 12px; border-radius:6px; font-size:0.85rem; margin-bottom:14px;}
+.ok-msg{background:#E4EDE1; border:1px solid var(--sage); color:#2c4a33; padding:9px 12px; border-radius:6px; font-size:0.85rem; margin-bottom:14px;}
 
-  /* ─── SIDEBAR ─── */
-  .sidebar {
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    padding: 16px 12px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .sidebar-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    color: var(--text3);
-    padding: 4px 10px;
-    margin: 8px 0 2px;
-    text-transform: uppercase;
-  }
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    color: var(--text2);
-    font-size: 14px;
-    font-weight: 400;
-    transition: var(--transition);
-    text-decoration: none;
-    position: relative;
-  }
-  .nav-item:hover { background: var(--surface); color: var(--text); }
-  .nav-item.active { background: var(--surface2); color: var(--accent); font-weight: 500; }
-  .nav-icon { font-size: 16px; width: 18px; text-align: center; }
-  .nav-badge {
-    margin-left: auto;
-    background: var(--accent);
-    color: var(--bg);
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-  }
+/* ---------- member cards ---------- */
+.member-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; margin-top:18px;}
+.member-card{
+  background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px;
+  display:flex; gap:12px; align-items:flex-start; transition:box-shadow .15s;
+}
+.member-card:hover{box-shadow:0 8px 20px -14px rgba(27,50,32,0.5);}
+.avatar{
+  width:44px; height:44px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:var(--font-display); font-size:1rem;
+}
+.member-name{font-weight:700; font-size:0.98rem;}
+.member-meta{font-size:0.78rem; color:#6b6355; margin-top:2px;}
+.member-tag{display:inline-block; font-size:0.68rem; font-family:var(--font-mono); background:var(--paper); color:var(--pine-dark); padding:2px 7px; border-radius:20px; margin-top:6px;}
 
-  /* ─── MAIN CONTENT ─── */
-  .main-content { overflow: hidden; display: flex; flex-direction: column; }
-  .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-  .view.active { display: flex; }
-  .view-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-  .view-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .view-body { flex: 1; overflow-y: auto; padding: 24px; }
-  .action-btn {
-    background: var(--accent);
-    color: var(--bg);
-    border: none;
-    border-radius: 8px;
-    padding: 9px 18px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .action-btn:hover { background: var(--accent2); }
+.empty-state{text-align:center; padding:50px 20px; color:#6b6355;}
+.empty-state svg{width:56px; height:56px; margin-bottom:12px; opacity:.55;}
 
-  /* ─── DASHBOARD ─── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
-    margin-bottom: 28px;
-  }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px 20px;
-  }
-  .stat-label { font-size: 12px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .stat-value { font-size: 28px; font-weight: 600; color: var(--text); font-family: 'Playfair Display', serif; }
-  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+/* ---------- chat ---------- */
+.chat-window{
+  height:440px; overflow-y:auto; background:var(--paper); border:1px solid var(--line);
+  border-radius:8px; padding:18px; display:flex; flex-direction:column; gap:12px; margin-bottom:16px;
+}
+.msg{max-width:72%; padding:9px 13px; border-radius:12px; font-size:0.9rem; line-height:1.4; position:relative;}
+.msg .who{font-family:var(--font-mono); font-size:0.68rem; color:var(--brass); margin-bottom:2px; display:block; font-weight:700; opacity:1;}
+.msg .ts{font-size:0.64rem; color:#948b78; margin-top:4px; display:block;}
+.msg.mine{align-self:flex-end; background:var(--pine); color:#F6F1E4;}
+.msg.mine .who{color:var(--brass-light);}
+.msg.theirs{align-self:flex-start; background:#fff; border:1px solid var(--line);}
+.chat-input-row{display:flex; gap:10px;}
 
-  .section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 18px;
-    color: var(--text);
-    margin-bottom: 14px;
-  }
+/* ---------- requests / suggestions ---------- */
+.req-card{
+  background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+  display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:10px; flex-wrap:wrap;
+}
+.req-actions{display:flex; gap:8px;}
+.pill{font-size:0.7rem; font-family:var(--font-mono); padding:2px 9px; border-radius:20px; font-weight:600;}
+.pill.pending{background:#F3E3C4; color:#7a5a12;}
+.pill.accepted{background:#DCEBDD; color:#2c5c33;}
+.pill.declined{background:#F0DAD3; color:#7a3721;}
 
-  /* ─── MEMBERS GRID ─── */
-  .members-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px;
-  }
-  .member-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: var(--transition);
-    position: relative;
-  }
-  .member-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .member-avatar {
-    width: 64px; height: 64px;
-    border-radius: 50%;
-    margin: 0 auto 12px;
-    object-fit: cover;
-    background: var(--surface2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--accent);
-    overflow: hidden;
-  }
-  .member-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .member-name { font-weight: 500; font-size: 15px; margin-bottom: 3px; }
-  .member-rel { font-size: 12px; color: var(--text3); }
-  .rel-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-top: 8px;
-  }
-  .rel-family { background: rgba(201,169,110,0.15); color: var(--accent); }
-  .rel-friend { background: rgba(91,142,240,0.15); color: var(--blue); }
+/* ---------- tree ---------- */
+.tree-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:#fff; padding:10px;}
+.tree-legend{display:flex; gap:22px; margin-top:14px; font-size:0.8rem; color:#6b6355; flex-wrap:wrap;}
+.tree-legend span{display:inline-flex; align-items:center; gap:6px;}
+.legend-swatch{width:22px; height:2px; display:inline-block;}
 
-  /* ─── TREE VIEW ─── */
-  #tree-container {
-    flex: 1;
-    overflow: auto;
-    background: var(--bg);
-    position: relative;
-    cursor: grab;
-  }
-  #tree-canvas {
-    position: absolute;
-    top: 0; left: 0;
-  }
-  .tree-controls {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    z-index: 5;
-  }
-  .tree-btn {
-    width: 36px; height: 36px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text2);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    transition: var(--transition);
-  }
-  .tree-btn:hover { background: var(--surface2); color: var(--text); }
-
-  /* ─── CHAT ─── */
-  .chat-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    flex: 1;
-    overflow: hidden;
-  }
-  .chat-sidebar {
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .chat-sidebar-header {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-  .chat-list { overflow-y: auto; flex: 1; }
-  .chat-item {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: var(--transition);
-    border-bottom: 1px solid rgba(42,48,69,0.4);
-  }
-  .chat-item:hover { background: var(--surface); }
-  .chat-item.active { background: var(--surface2); }
-  .chat-item-name { font-size: 14px; font-weight: 500; }
-  .chat-item-preview { font-size: 12px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
-  .chat-item-time { font-size: 11px; color: var(--text3); margin-left: auto; flex-shrink: 0; }
-  .chat-unread {
-    width: 18px; height: 18px;
-    background: var(--accent);
-    border-radius: 50%;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .chat-area {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--bg);
-  }
-  .chat-header {
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
-    background: var(--bg2);
-  }
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .msg {
-    max-width: 72%;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .msg.own { align-self: flex-end; align-items: flex-end; }
-  .msg.other { align-self: flex-start; align-items: flex-start; }
-  .msg-sender { font-size: 11px; color: var(--text3); padding: 0 4px; }
-  .msg-bubble {
-    padding: 10px 14px;
-    border-radius: 16px;
-    font-size: 14px;
-    line-height: 1.5;
-    word-break: break-word;
-  }
-  .msg.own .msg-bubble { background: var(--accent); color: var(--bg); border-bottom-right-radius: 4px; }
-  .msg.other .msg-bubble { background: var(--surface2); color: var(--text); border-bottom-left-radius: 4px; }
-  .msg-time { font-size: 10px; color: var(--text3); padding: 0 4px; }
-  .msg-image { max-width: 240px; border-radius: 12px; margin-top: 4px; cursor: pointer; }
-  .chat-input-area {
-    padding: 14px 16px;
-    border-top: 1px solid var(--border);
-    background: var(--bg2);
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-  .chat-input {
-    flex: 1;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    outline: none;
-    resize: none;
-    max-height: 120px;
-    overflow-y: auto;
-    margin: 0;
-  }
-  .chat-input:focus { border-color: var(--accent); }
-  .chat-send {
-    width: 38px; height: 38px;
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--bg);
-    font-size: 16px;
-    transition: var(--transition);
-    flex-shrink: 0;
-  }
-  .chat-send:hover { background: var(--accent2); }
-  .media-btn {
-    width: 36px; height: 36px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text2);
-    font-size: 15px;
-    transition: var(--transition);
-    flex-shrink: 0;
-  }
-  .media-btn:hover { background: var(--surface2); }
-
-  /* ─── PROFILE ─── */
-  .profile-header {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    display: flex;
-    gap: 24px;
-    align-items: flex-start;
-    margin-bottom: 20px;
-  }
-  .profile-avatar-wrap {
-    position: relative;
-    cursor: pointer;
-  }
-  .profile-avatar {
-    width: 90px; height: 90px;
-    border-radius: 50%;
-    background: var(--surface2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--accent);
-    overflow: hidden;
-    border: 3px solid var(--accent);
-  }
-  .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .profile-edit-overlay {
-    position: absolute;
-    bottom: 0; right: 0;
-    width: 28px; height: 28px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    color: var(--bg);
-    border: 2px solid var(--surface);
-  }
-  .profile-info { flex: 1; }
-  .profile-name {
-    font-family: 'Playfair Display', serif;
-    font-size: 26px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-  .profile-meta { font-size: 13px; color: var(--text3); display: flex; gap: 16px; flex-wrap: wrap; }
-  .profile-meta span { display: flex; align-items: center; gap: 5px; }
-  .profile-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  .profile-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-  }
-  .profile-section h3 {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 14px;
-  }
-  .profile-field { margin-bottom: 12px; }
-  .profile-field label { font-size: 12px; color: var(--text3); margin-bottom: 3px; }
-  .profile-field .value { font-size: 14px; color: var(--text); font-weight: 400; }
-
-  /* ─── MODAL ─── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    backdrop-filter: blur(4px);
-  }
-  .modal-overlay.show { display: flex; }
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius-lg);
-    padding: 32px;
-    width: 480px;
-    max-width: 95vw;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  .modal-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 24px;
-    color: var(--text);
-  }
-  .modal-footer {
-    display: flex;
-    gap: 10px;
-    margin-top: 24px;
-    justify-content: flex-end;
-  }
-  .btn-cancel {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text2);
-    border-radius: 8px;
-    padding: 9px 18px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-  .btn-cancel:hover { background: var(--surface2); }
-
-  /* ─── TABS ─── */
-  .tab-bar {
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    padding: 0 20px;
-    background: var(--bg2);
-  }
-  .tab {
-    padding: 12px 18px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text3);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: var(--transition);
-    margin-bottom: -1px;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  /* ─── FILTERS ─── */
-  .filter-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-  }
-  .filter-chip {
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text2);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-  .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
-  .filter-chip.active { background: rgba(201,169,110,0.15); border-color: var(--accent); color: var(--accent); }
-
-  /* ─── TOAST ─── */
-  #toast {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    padding: 12px 20px;
-    font-size: 13px;
-    color: var(--text);
-    z-index: 9999;
-    transition: transform 0.3s ease;
-    white-space: nowrap;
-  }
-  #toast.show { transform: translateX(-50%) translateY(0); }
-
-  /* ─── LOADING ─── */
-  .loading-screen {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 14px;
-    height: 100%;
-    color: var(--text3);
-    font-size: 14px;
-  }
-  .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ─── SCROLLBAR ─── */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-
-  /* ─── ONLINE DOT ─── */
-  .online-dot {
-    width: 9px; height: 9px;
-    background: var(--green);
-    border-radius: 50%;
-    border: 2px solid var(--bg2);
-    position: absolute;
-    bottom: 0; right: 0;
-  }
-  .avatar-wrap { position: relative; display: inline-flex; }
-
-  /* ─── EMPTY STATE ─── */
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text3);
-  }
-  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
-  .empty-text { font-size: 15px; color: var(--text2); margin-bottom: 6px; }
-  .empty-sub { font-size: 13px; }
-
-  /* ─── GROUP BADGE ─── */
-  .group-avatar {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--purple), var(--blue));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 15px;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  /* setup notice */
-  .setup-notice {
-    background: rgba(91,142,240,0.1);
-    border: 1px solid rgba(91,142,240,0.3);
-    border-radius: var(--radius);
-    padding: 16px 20px;
-    font-size: 13px;
-    color: var(--blue);
-    margin-bottom: 20px;
-    line-height: 1.6;
-  }
-  .setup-notice a { color: var(--accent2); }
-  .setup-notice code {
-    background: rgba(0,0,0,0.3);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12px;
-  }
+@media (max-width:860px){
+  .app-shell{flex-direction:column;}
+  .sidebar{width:100%; height:auto; position:relative; flex-direction:row; overflow-x:auto; padding:14px 0;}
+  .brand{border-bottom:none; margin-bottom:0; padding:0 14px;}
+  .navlist{flex-direction:row; padding:0 8px;}
+  .navbtn{white-space:nowrap; border-radius:8px;}
+  .sidebar-foot{border-top:none; padding:0 14px;}
+  main{padding:22px 16px;}
+  .card{padding:20px 18px;}
+}
 </style>
 </head>
 <body>
-
-<!-- AUTH SCREEN -->
-<div id="auth-screen">
-  <div class="auth-card">
-    <div class="auth-logo">🌳 KinTree</div>
-    <div class="auth-tagline">Connect & preserve your family legacy</div>
-
-    <!-- Setup Notice (hidden once Supabase is configured) -->
-    <div class="setup-notice" id="setup-notice" style="display:none;">
-      ⚙️ <strong>Supabase not configured.</strong> Add your credentials in the script, or
-      <a href="#" onclick="showDemoMode();return false;">try the demo →</a>
-    </div>
-
-    <!-- Login Form -->
-    <div id="login-form">
-      <button class="btn btn-google" id="btn-google" onclick="signInWithGoogle()">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-      <div class="auth-divider">or sign in with email</div>
-      <div id="auth-error" style="display:none;background:rgba(224,91,91,0.12);border:1px solid rgba(224,91,91,0.35);border-radius:8px;padding:10px 14px;font-size:13px;color:#e05b5b;margin-bottom:12px;"></div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')signIn()">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')signIn()">
-      </div>
-      <button class="btn btn-primary" id="btn-signin" onclick="signIn()">Sign In</button>
-      <div class="auth-toggle">No account? <a onclick="showRegister()">Create one →</a></div>
-      <div class="auth-toggle" style="margin-top:10px;">Just exploring? <a href="#" onclick="showDemoMode();return false;">Try the demo →</a></div>
-    </div>
-
-    <!-- Register Form -->
-    <div id="register-form" style="display:none">
-      <div id="auth-error-reg" style="display:none;background:rgba(224,91,91,0.12);border:1px solid rgba(224,91,91,0.35);border-radius:8px;padding:10px 14px;font-size:13px;color:#e05b5b;margin-bottom:12px;"></div>
-      <div class="form-group">
-        <label>First Name</label>
-        <input type="text" id="reg-firstname" placeholder="First name">
-      </div>
-      <div class="form-group">
-        <label>Last Name</label>
-        <input type="text" id="reg-lastname" placeholder="Last name">
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="reg-email" placeholder="your@email.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="reg-password" placeholder="Min 6 characters">
-      </div>
-      <div class="form-group">
-        <label>Date of Birth</label>
-        <input type="date" id="reg-dob">
-      </div>
-      <button class="btn btn-primary" id="btn-signup" onclick="signUp()">Create Account</button>
-      <div class="auth-toggle">Already have an account? <a onclick="showLogin()">Sign in →</a></div>
-    </div>
-  </div>
-</div>
-
-<!-- MAIN APP -->
-<div id="app">
-  <div class="app-layout">
-    <!-- TOPBAR -->
-    <div class="topbar">
-      <div class="topbar-logo">🌳 KinTree</div>
-      <div class="topbar-search">
-        <span class="topbar-search-icon">🔍</span>
-        <input type="text" placeholder="Search members..." id="search-input" oninput="searchMembers(this.value)">
-      </div>
-      <div class="topbar-actions">
-        <div class="notif-btn" title="Notifications">🔔</div>
-        <div class="avatar" id="user-avatar" onclick="navigate('profile')" title="My Profile"></div>
-      </div>
-    </div>
-
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <div class="nav-item active" onclick="navigate('dashboard')" data-view="dashboard">
-        <span class="nav-icon">🏠</span> Dashboard
-      </div>
-      <div class="nav-item" onclick="navigate('members')" data-view="members">
-        <span class="nav-icon">👥</span> Members
-      </div>
-      <div class="nav-item" onclick="navigate('tree')" data-view="tree">
-        <span class="nav-icon">🌳</span> Family Tree
-      </div>
-      <div class="nav-item" onclick="navigate('chat')" data-view="chat">
-        <span class="nav-icon">💬</span> Chat
-        <span class="nav-badge" id="chat-badge" style="display:none">0</span>
-      </div>
-      <div class="nav-item" onclick="navigate('profile')" data-view="profile">
-        <span class="nav-icon">👤</span> My Profile
-      </div>
-      <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); margin-top: auto;">
-        <div class="nav-item" onclick="signOut()">
-          <span class="nav-icon">🚪</span> Sign Out
-        </div>
-      </div>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <div class="main-content">
-
-      <!-- DASHBOARD -->
-      <div class="view active" id="view-dashboard">
-        <div class="view-header">
-          <div class="view-title" id="welcome-msg">Welcome back</div>
-          <button class="action-btn" onclick="openAddMemberModal()">+ Add Member</button>
-        </div>
-        <div class="view-body">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Total Members</div>
-              <div class="stat-value" id="stat-total">0</div>
-              <div class="stat-sub">In your network</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Family</div>
-              <div class="stat-value" id="stat-family">0</div>
-              <div class="stat-sub" style="color:var(--accent)">relatives</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Friends</div>
-              <div class="stat-value" id="stat-friends">0</div>
-              <div class="stat-sub" style="color:var(--blue)">connections</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Messages</div>
-              <div class="stat-value" id="stat-messages">0</div>
-              <div class="stat-sub">conversations</div>
-            </div>
-          </div>
-
-          <div class="section-title">Recent Members</div>
-          <div class="members-grid" id="recent-members">
-            <div class="loading-screen"><div class="spinner"></div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MEMBERS -->
-      <div class="view" id="view-members">
-        <div class="view-header">
-          <div class="view-title">Members</div>
-          <button class="action-btn" onclick="openAddMemberModal()">+ Add Member</button>
-        </div>
-        <div class="view-body">
-          <div class="filter-bar">
-            <div class="filter-chip active" onclick="filterMembers('all', this)">All</div>
-            <div class="filter-chip" onclick="filterMembers('family', this)">👨‍👩‍👧 Family</div>
-            <div class="filter-chip" onclick="filterMembers('friend', this)">🤝 Friends</div>
-          </div>
-          <div class="members-grid" id="all-members">
-            <div class="loading-screen"><div class="spinner"></div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- FAMILY TREE -->
-      <div class="view" id="view-tree" style="flex-direction:column;overflow:hidden;">
-        <div class="view-header">
-          <div class="view-title">Family Tree</div>
-          <div style="display:flex;gap:8px;">
-            <div class="filter-chip active" id="tree-tab-family" onclick="setTreeFilter('family', this)">Family</div>
-            <div class="filter-chip" id="tree-tab-all" onclick="setTreeFilter('all', this)">Everyone</div>
-          </div>
-        </div>
-        <div id="tree-container">
-          <canvas id="tree-canvas"></canvas>
-          <div class="tree-controls">
-            <div class="tree-btn" onclick="zoomTree(1.2)" title="Zoom In">+</div>
-            <div class="tree-btn" onclick="zoomTree(0.83)" title="Zoom Out">−</div>
-            <div class="tree-btn" onclick="resetTree()" title="Reset">⊙</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CHAT -->
-      <div class="view" id="view-chat" style="overflow:hidden;">
-        <div class="chat-layout">
-          <div class="chat-sidebar">
-            <div class="chat-sidebar-header">
-              <span style="font-size:15px;font-weight:600;">Messages</span>
-              <div style="display:flex;gap:6px;">
-                <div class="tree-btn" title="New Group Chat" onclick="openGroupChatModal()" style="width:28px;height:28px;font-size:13px;">👥</div>
-                <div class="tree-btn" title="New Chat" onclick="openNewChatModal()" style="width:28px;height:28px;font-size:13px;">+</div>
-              </div>
-            </div>
-            <div class="chat-list" id="chat-list">
-              <div class="loading-screen" style="padding:40px 0;"><div class="spinner"></div></div>
-            </div>
-          </div>
-          <div class="chat-area" id="chat-area">
-            <div class="empty-state" style="margin:auto;">
-              <div class="empty-icon">💬</div>
-              <div class="empty-text">Select a conversation</div>
-              <div class="empty-sub">or start a new chat</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PROFILE -->
-      <div class="view" id="view-profile">
-        <div class="view-header">
-          <div class="view-title">My Profile</div>
-          <button class="action-btn" onclick="openEditProfileModal()">✏️ Edit</button>
-        </div>
-        <div class="view-body" id="profile-view-body">
-          <div class="loading-screen"><div class="spinner"></div></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- ADD MEMBER MODAL -->
-<div class="modal-overlay" id="add-member-modal">
-  <div class="modal">
-    <div class="modal-title">Add New Member</div>
-    <div class="form-group">
-      <label>First Name *</label>
-      <input type="text" id="am-firstname" placeholder="First name">
-    </div>
-    <div class="form-group">
-      <label>Last Name</label>
-      <input type="text" id="am-lastname" placeholder="Last name">
-    </div>
-    <div class="form-group">
-      <label>Date of Birth</label>
-      <input type="date" id="am-dob">
-    </div>
-    <div class="form-group">
-      <label>Relationship Type *</label>
-      <select id="am-rel-type">
-        <option value="family">👨‍👩‍👧 Family</option>
-        <option value="friend">🤝 Friend</option>
-      </select>
-    </div>
-    <div class="form-group" id="am-rel-label-wrap">
-      <label>Relationship Label</label>
-      <select id="am-rel-label">
-        <option value="parent">Parent</option>
-        <option value="child">Child</option>
-        <option value="sibling">Sibling</option>
-        <option value="spouse">Spouse</option>
-        <option value="grandparent">Grandparent</option>
-        <option value="grandchild">Grandchild</option>
-        <option value="aunt_uncle">Aunt / Uncle</option>
-        <option value="cousin">Cousin</option>
-        <option value="other_family">Other Family</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Phone</label>
-      <input type="text" id="am-phone" placeholder="+1 234 567 890">
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="text" id="am-email" placeholder="member@email.com">
-    </div>
-    <div class="form-group">
-      <label>Photo URL (optional)</label>
-      <input type="text" id="am-photo" placeholder="https://...">
-    </div>
-    <div class="form-group">
-      <label>Notes / Bio</label>
-      <textarea id="am-notes" rows="3" placeholder="A short bio or notes..." style="resize:vertical;margin-bottom:0;"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('add-member-modal')">Cancel</button>
-      <button class="action-btn" onclick="addMember()" style="width:auto;">Add Member</button>
-    </div>
-  </div>
-</div>
-
-<!-- MEMBER DETAIL MODAL -->
-<div class="modal-overlay" id="member-detail-modal">
-  <div class="modal">
-    <div id="member-detail-content"></div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('member-detail-modal')">Close</button>
-      <button class="action-btn" id="chat-with-btn" style="width:auto;" onclick="">💬 Chat</button>
-    </div>
-  </div>
-</div>
-
-<!-- EDIT PROFILE MODAL -->
-<div class="modal-overlay" id="edit-profile-modal">
-  <div class="modal">
-    <div class="modal-title">Edit Profile</div>
-    <div class="form-group">
-      <label>First Name</label>
-      <input type="text" id="ep-firstname">
-    </div>
-    <div class="form-group">
-      <label>Last Name</label>
-      <input type="text" id="ep-lastname">
-    </div>
-    <div class="form-group">
-      <label>Date of Birth</label>
-      <input type="date" id="ep-dob">
-    </div>
-    <div class="form-group">
-      <label>Phone</label>
-      <input type="text" id="ep-phone">
-    </div>
-    <div class="form-group">
-      <label>Bio</label>
-      <textarea id="ep-bio" rows="3" style="resize:vertical;margin-bottom:0;"></textarea>
-    </div>
-    <div class="form-group" style="margin-top:12px;">
-      <label>Photo URL</label>
-      <input type="text" id="ep-photo" placeholder="https://...">
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('edit-profile-modal')">Cancel</button>
-      <button class="action-btn" onclick="saveProfile()" style="width:auto;">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<!-- NEW CHAT MODAL -->
-<div class="modal-overlay" id="new-chat-modal">
-  <div class="modal">
-    <div class="modal-title">New Conversation</div>
-    <div id="new-chat-list" style="max-height:360px;overflow-y:auto;"></div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('new-chat-modal')">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- GROUP CHAT MODAL -->
-<div class="modal-overlay" id="group-chat-modal">
-  <div class="modal">
-    <div class="modal-title">Create Group Chat</div>
-    <div class="form-group">
-      <label>Group Name *</label>
-      <input type="text" id="gc-name" placeholder="e.g. Smith Family 🏡">
-    </div>
-    <div style="font-size:13px;color:var(--text3);margin-bottom:10px;">Select members:</div>
-    <div id="group-member-list" style="max-height:280px;overflow-y:auto;"></div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeModal('group-chat-modal')">Cancel</button>
-      <button class="action-btn" onclick="createGroupChat()" style="width:auto;">Create Group</button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div id="toast"></div>
+<div id="root"></div>
 
 <script>
-// ═══════════════════════════════════════════════
-// CONFIGURATION — Edit these!
-// ═══════════════════════════════════════════════
-const SUPABASE_URL = 'https://dnfcocbwjrlbvmpazppc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_iyMoqpuYk7k5iAPn7xBRwg_wKh0nUfW';
+/* ============================= STORAGE HELPERS ============================= */
+async function stGet(key){
+  try{
+    const r = await window.storage.get(key, true);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){ return null; }
+}
+async function stSet(key, value){
+  try{ await window.storage.set(key, JSON.stringify(value), true); }
+  catch(e){ console.error('storage set failed', key, e); }
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-// Load Supabase SDK dynamically so a CDN failure never blocks the page
-(function() {
-  var s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
-  s.onload = function() { bootApp(); };
-  s.onerror = function() {
-    console.warn('Supabase SDK failed to load — running in demo mode');
-    bootApp();
-  };
-  document.head.appendChild(s);
-})();
+/* ============================= APP STATE ============================= */
+let DB = { users:[], members:[], relations:[], chat:[] };
+let loaded = false;
+let session = { user:null }; // in-memory only — logging in is required each visit, nothing is persisted to the browser
+let view = 'tree';
+let authTab = 'login';
+let authError = '';
+let regMode = 'new'; // 'new' | 'claim'
+let searchQuery = '';
+let ancestorFor = '';
+let addRelationDefaults = null;
+let dismissedSuggestions = []; // {username, pairKey}
 
-// ═══════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════
-let supabase = null, currentUser, currentProfile, members = [], conversations = [], activeConvId = null;
-let treeScale = 1, treeOffsetX = 0, treeOffsetY = 0, treeFilter = 'family';
-let isDragging = false, dragStart = {x:0,y:0};
-let realtimeChannel = null;
-let groupSelected = [];
-let supabaseReady = false;
+const AVATAR_COLORS = ['#2E5136','#B07F2C','#A05A3E','#7C9C87','#3F6B4A','#8C6A2E','#5B7A63','#9C6B4E'];
 
-function initSupabase() {
-  if (supabaseReady) return true;
-  if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL) return false;
-  try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    supabaseReady = true;
-    return true;
-  } catch(e) {
-    console.error('Supabase init failed:', e);
-    return false;
-  }
+function colorFor(id){
+  let h=0; for(const c of id) h = (h*31 + c.charCodeAt(0)) % 997;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function initials(m){
+  return ((m.first||'?')[0]+(m.last||'')[0]).toUpperCase();
+}
+function fullName(m){
+  if(!m) return 'Unknown';
+  return [m.first, m.last].filter(Boolean).join(' ') || 'Unnamed';
+}
+function getMember(id){ return DB.members.find(m=>m.id===id); }
+function getUserByMember(memberId){ return DB.users.find(u=>u.memberId===memberId); }
+function fmtYear(m){
+  if(!m) return '';
+  if(m.birthYear && m.deathYear) return m.birthYear+' – '+m.deathYear;
+  if(m.birthYear) return 'b. '+m.birthYear;
+  return '';
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function showAuthError(msg, isReg) {
-  const id = isReg ? 'auth-error-reg' : 'auth-error';
-  const el = document.getElementById(id);
-  if (!el) return showToast('❌ ' + msg);
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-function clearAuthError() {
-  ['auth-error','auth-error-reg'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-
-function setBtnLoading(id, loading, label) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  btn.disabled = loading;
-  btn.textContent = loading ? '⏳ Please wait…' : label;
-}
-
-// ═══════════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════════
-async function signIn() {
-  clearAuthError();
-  if (!supabaseReady) return showDemoMode();
-  const email = document.getElementById('login-email').value.trim();
-  const pw = document.getElementById('login-password').value;
-  if (!email || !pw) return showAuthError('Please enter your email and password.');
-  setBtnLoading('btn-signin', true, 'Sign In');
-  const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-  setBtnLoading('btn-signin', false, 'Sign In');
-  if (error) showAuthError(error.message);
-  else checkSession();
-}
-
-async function signUp() {
-  clearAuthError();
-  if (!supabaseReady) return showDemoMode();
-  const fn = document.getElementById('reg-firstname').value.trim();
-  const ln = document.getElementById('reg-lastname').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const pw = document.getElementById('reg-password').value;
-  const dob = document.getElementById('reg-dob').value;
-  if (!fn || !email || !pw) return showAuthError('Please fill in all required fields.', true);
-  if (pw.length < 6) return showAuthError('Password must be at least 6 characters.', true);
-  setBtnLoading('btn-signup', true, 'Create Account');
-  const { data, error } = await supabase.auth.signUp({ email, password: pw });
-  setBtnLoading('btn-signup', false, 'Create Account');
-  if (error) return showAuthError(error.message, true);
-  if (data.user) {
-    await supabase.from('profiles').insert([{
-      id: data.user.id, first_name: fn, last_name: ln,
-      email, date_of_birth: dob || null, created_at: new Date().toISOString()
-    }]);
-    showAuthError('✅ Account created! Check your email to verify.', true);
-  }
-}
-
-async function signInWithGoogle() {
-  clearAuthError();
-  if (!supabaseReady) {
-    showAuthError('Supabase not configured. Use email login or try the demo.');
-    return;
-  }
-  const btn = document.getElementById('btn-google');
-  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Redirecting…'; }
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.href }
-  });
-  if (error) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> Continue with Google'; }
-    showAuthError(error.message);
-  }
-}
-
-async function signOut() {
-  if (supabase) await supabase.auth.signOut();
-  currentUser = null; currentProfile = null; members = []; conversations = [];
-  if (realtimeChannel) { supabase.removeChannel(realtimeChannel); }
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
-}
-
-async function checkSession() {
-  if (!supabase) return;
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    await loadProfile();
-    showApp();
-  }
-}
-
-// ═══════════════════════════════════════════════
-// DEMO MODE (no Supabase configured)
-// ═══════════════════════════════════════════════
-function showDemoMode() {
-  currentUser = { id: 'demo-user', email: 'demo@kintree.app' };
-  currentProfile = {
-    id: 'demo-user', first_name: 'Alex', last_name: 'Morgan',
-    email: 'demo@kintree.app', date_of_birth: '1985-06-15',
-    bio: 'Family tree enthusiast', photo_url: null
-  };
-  members = [
-    { id: '1', first_name: 'Sarah', last_name: 'Morgan', relation_type: 'family', relation_label: 'spouse', date_of_birth: '1987-03-22', photo_url: null, email: 's@m.com', notes: 'My wonderful partner' },
-    { id: '2', first_name: 'James', last_name: 'Morgan', relation_type: 'family', relation_label: 'child', date_of_birth: '2012-08-10', photo_url: null, email: '', notes: '' },
-    { id: '3', first_name: 'Eleanor', last_name: 'Morgan', relation_type: 'family', relation_label: 'parent', date_of_birth: '1955-01-30', photo_url: null, email: 'e@m.com', notes: 'Grandmother' },
-    { id: '4', first_name: 'Robert', last_name: 'Morgan', relation_type: 'family', relation_label: 'parent', date_of_birth: '1953-07-14', photo_url: null, email: 'r@m.com', notes: 'Grandfather' },
-    { id: '5', first_name: 'Chris', last_name: 'Lee', relation_type: 'friend', relation_label: 'friend', date_of_birth: '1983-11-05', photo_url: null, email: 'c@l.com', notes: 'College buddy' },
-    { id: '6', first_name: 'Priya', last_name: 'Sharma', relation_type: 'friend', relation_label: 'friend', date_of_birth: '1990-04-18', photo_url: null, email: 'p@s.com', notes: 'Work colleague' },
-  ];
-  conversations = [
-    { id: 'c1', type: 'direct', name: 'Sarah Morgan', member_id: '1', messages: [
-      { sender: '1', text: 'Hey! Did you see the photos?', time: '10:30 AM' },
-      { sender: 'demo-user', text: 'Yes! They look amazing 😍', time: '10:32 AM' }
-    ]},
-    { id: 'c2', type: 'group', name: 'Morgan Family 🏡', members: ['1','2','3','4'], messages: [
-      { sender: '3', text: 'Reunion next Sunday!', time: 'Yesterday' },
-      { sender: 'demo-user', text: "We'll be there!", time: 'Yesterday' }
-    ]}
-  ];
-  showApp();
-}
-
-// ═══════════════════════════════════════════════
-// APP SETUP
-// ═══════════════════════════════════════════════
-function showApp() {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  const name = currentProfile ? currentProfile.first_name : 'there';
-  document.getElementById('welcome-msg').textContent = `Welcome back, ${name} 👋`;
-  setUserAvatar();
-  loadDashboard();
-  if (supabase) subscribeToMessages();
-}
-
-function setUserAvatar() {
-  const el = document.getElementById('user-avatar');
-  if (currentProfile?.photo_url) {
-    el.innerHTML = `<img src="${currentProfile.photo_url}" alt="">`;
-  } else {
-    const n = (currentProfile?.first_name || 'U')[0].toUpperCase();
-    el.textContent = n;
-  }
-}
-
-// ═══════════════════════════════════════════════
-// PROFILE
-// ═══════════════════════════════════════════════
-async function loadProfile() {
-  if (!supabase) return;
-  const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-  if (data) currentProfile = data;
-}
-
-function renderProfile() {
-  const p = currentProfile || {};
-  const age = p.date_of_birth ? calcAge(p.date_of_birth) : '—';
-  const body = document.getElementById('profile-view-body');
-  body.innerHTML = `
-    <div class="profile-header">
-      <div class="profile-avatar-wrap" onclick="openEditProfileModal()">
-        <div class="profile-avatar">
-          ${p.photo_url ? `<img src="${p.photo_url}" alt="">` : (p.first_name||'?')[0].toUpperCase()}
-        </div>
-        <div class="profile-edit-overlay">✏️</div>
-      </div>
-      <div class="profile-info">
-        <div class="profile-name">${p.first_name||''} ${p.last_name||''}</div>
-        <div class="profile-meta">
-          <span>📅 Age ${age}</span>
-          <span>📧 ${p.email || currentUser?.email || '—'}</span>
-          ${p.phone ? `<span>📱 ${p.phone}</span>` : ''}
-        </div>
-        ${p.bio ? `<p style="margin-top:10px;font-size:14px;color:var(--text2);line-height:1.6;">${p.bio}</p>` : ''}
-      </div>
-    </div>
-    <div class="profile-grid">
-      <div class="profile-section">
-        <h3>Personal Details</h3>
-        <div class="profile-field"><label>First Name</label><div class="value">${p.first_name||'—'}</div></div>
-        <div class="profile-field"><label>Last Name</label><div class="value">${p.last_name||'—'}</div></div>
-        <div class="profile-field"><label>Date of Birth</label><div class="value">${p.date_of_birth ? new Date(p.date_of_birth).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '—'}</div></div>
-        <div class="profile-field"><label>Age</label><div class="value">${age}</div></div>
-      </div>
-      <div class="profile-section">
-        <h3>Contact Info</h3>
-        <div class="profile-field"><label>Email</label><div class="value">${p.email || currentUser?.email || '—'}</div></div>
-        <div class="profile-field"><label>Phone</label><div class="value">${p.phone||'—'}</div></div>
-        <div class="profile-field"><label>Member since</label><div class="value">${p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</div></div>
-      </div>
-    </div>
-  `;
-}
-
-function openEditProfileModal() {
-  const p = currentProfile || {};
-  document.getElementById('ep-firstname').value = p.first_name || '';
-  document.getElementById('ep-lastname').value = p.last_name || '';
-  document.getElementById('ep-dob').value = p.date_of_birth || '';
-  document.getElementById('ep-phone').value = p.phone || '';
-  document.getElementById('ep-bio').value = p.bio || '';
-  document.getElementById('ep-photo').value = p.photo_url || '';
-  openModal('edit-profile-modal');
-}
-
-async function saveProfile() {
-  const updates = {
-    first_name: document.getElementById('ep-firstname').value.trim(),
-    last_name: document.getElementById('ep-lastname').value.trim(),
-    date_of_birth: document.getElementById('ep-dob').value || null,
-    phone: document.getElementById('ep-phone').value.trim(),
-    bio: document.getElementById('ep-bio').value.trim(),
-    photo_url: document.getElementById('ep-photo').value.trim() || null,
-  };
-  if (supabase) {
-    await supabase.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, ...updates });
-  }
-  currentProfile = { ...currentProfile, ...updates };
-  setUserAvatar();
-  renderProfile();
-  closeModal('edit-profile-modal');
-  showToast('✅ Profile updated!');
-}
-
-// ═══════════════════════════════════════════════
-// MEMBERS
-// ═══════════════════════════════════════════════
-async function loadMembers() {
-  if (supabase) {
-    const { data } = await supabase.from('members')
-      .select('*').eq('owner_id', currentUser.id).order('created_at', { ascending: false });
-    if (data) members = data;
-  }
-}
-
-function renderMembersGrid(container, list) {
-  if (!list || !list.length) {
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-      <div class="empty-icon">👥</div>
-      <div class="empty-text">No members yet</div>
-      <div class="empty-sub">Add family or friends to get started</div>
-    </div>`;
-    return;
-  }
-  container.innerHTML = list.map(m => `
-    <div class="member-card" onclick="openMemberDetail('${m.id}')">
-      <div class="member-avatar">
-        ${m.photo_url ? `<img src="${m.photo_url}" alt="">` : (m.first_name||'?')[0].toUpperCase()}
-      </div>
-      <div class="member-name">${m.first_name} ${m.last_name||''}</div>
-      <div class="member-rel">${formatRelLabel(m.relation_label)}</div>
-      <span class="rel-badge rel-${m.relation_type}">${m.relation_type === 'family' ? '👨‍👩‍👧 Family' : '🤝 Friend'}</span>
-      ${m.date_of_birth ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;">Age ${calcAge(m.date_of_birth)}</div>` : ''}
-    </div>
-  `).join('');
-}
-
-let memberFilter = 'all';
-function filterMembers(type, el) {
-  memberFilter = type;
-  document.querySelectorAll('#view-members .filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  const filtered = type === 'all' ? members : members.filter(m => m.relation_type === type);
-  renderMembersGrid(document.getElementById('all-members'), filtered);
-}
-
-function searchMembers(q) {
-  if (!q) { renderMembersGrid(document.getElementById('all-members'), members); return; }
-  const filtered = members.filter(m =>
-    `${m.first_name} ${m.last_name}`.toLowerCase().includes(q.toLowerCase())
+/* ============================= RELATION HELPERS ============================= */
+function relationExists(aId,bId,type){
+  return DB.relations.some(r =>
+    r.type===type && r.status!=='declined' &&
+    ((r.aId===aId && r.bId===bId) || (type!=='parent-of' && r.aId===bId && r.bId===aId))
   );
-  renderMembersGrid(document.getElementById('all-members'), filtered);
 }
-
-function openMemberDetail(id) {
-  const m = members.find(x => x.id === id);
-  if (!m) return;
-  const age = m.date_of_birth ? calcAge(m.date_of_birth) : null;
-  document.getElementById('member-detail-content').innerHTML = `
-    <div style="text-align:center;margin-bottom:20px;">
-      <div class="member-avatar" style="width:80px;height:80px;font-size:28px;margin:0 auto 12px;">
-        ${m.photo_url ? `<img src="${m.photo_url}" alt="">` : (m.first_name||'?')[0].toUpperCase()}
-      </div>
-      <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;">${m.first_name} ${m.last_name||''}</div>
-      <span class="rel-badge rel-${m.relation_type}" style="margin-top:6px;">${m.relation_type === 'family' ? '👨‍👩‍👧 Family' : '🤝 Friend'} · ${formatRelLabel(m.relation_label)}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      ${age ? `<div class="profile-field"><label>Age</label><div class="value">${age}</div></div>` : ''}
-      ${m.date_of_birth ? `<div class="profile-field"><label>Date of Birth</label><div class="value">${new Date(m.date_of_birth).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>` : ''}
-      ${m.email ? `<div class="profile-field"><label>Email</label><div class="value">${m.email}</div></div>` : ''}
-      ${m.phone ? `<div class="profile-field"><label>Phone</label><div class="value">${m.phone}</div></div>` : ''}
-    </div>
-    ${m.notes ? `<div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:8px;font-size:13px;color:var(--text2);line-height:1.6;">${m.notes}</div>` : ''}
-  `;
-  document.getElementById('chat-with-btn').onclick = () => { closeModal('member-detail-modal'); startChatWith(m); };
-  openModal('member-detail-modal');
+function computeApprover(otherMemberId, currentUserId){
+  const u = getUserByMember(otherMemberId);
+  if(u && u.id !== currentUserId) return u.id;
+  return null;
 }
+async function createRelation(yourMemberId, otherMemberId, humanType){
+  let aId, bId, type;
+  if(humanType==='parent'){ aId = otherMemberId; bId = yourMemberId; type='parent-of'; }
+  else if(humanType==='child'){ aId = yourMemberId; bId = otherMemberId; type='parent-of'; }
+  else if(humanType==='spouse'){ aId = yourMemberId; bId = otherMemberId; type='spouse-of'; }
+  else { aId = yourMemberId; bId = otherMemberId; type='sibling-of'; }
 
-function openAddMemberModal() {
-  // reset fields
-  ['am-firstname','am-lastname','am-phone','am-email','am-photo','am-notes'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('am-dob').value = '';
-  document.getElementById('am-rel-type').value = 'family';
-  document.getElementById('am-rel-label').value = 'parent';
-  openModal('add-member-modal');
-}
-
-document.getElementById('am-rel-type').addEventListener('change', function() {
-  const wrap = document.getElementById('am-rel-label-wrap');
-  const sel = document.getElementById('am-rel-label');
-  if (this.value === 'friend') {
-    sel.innerHTML = '<option value="friend">Friend</option><option value="best_friend">Best Friend</option><option value="colleague">Colleague</option>';
-    wrap.style.display = '';
-  } else {
-    sel.innerHTML = `<option value="parent">Parent</option><option value="child">Child</option><option value="sibling">Sibling</option><option value="spouse">Spouse</option><option value="grandparent">Grandparent</option><option value="grandchild">Grandchild</option><option value="aunt_uncle">Aunt / Uncle</option><option value="cousin">Cousin</option><option value="other_family">Other Family</option>`;
-    wrap.style.display = '';
+  if(relationExists(aId,bId,type)){
+    return {ok:false, msg:'That relation has already been recorded.'};
   }
-});
-
-async function addMember() {
-  const fn = document.getElementById('am-firstname').value.trim();
-  if (!fn) return showToast('First name is required');
-  const member = {
-    owner_id: currentUser.id,
-    first_name: fn,
-    last_name: document.getElementById('am-lastname').value.trim(),
-    date_of_birth: document.getElementById('am-dob').value || null,
-    relation_type: document.getElementById('am-rel-type').value,
-    relation_label: document.getElementById('am-rel-label').value,
-    phone: document.getElementById('am-phone').value.trim(),
-    email: document.getElementById('am-email').value.trim(),
-    photo_url: document.getElementById('am-photo').value.trim() || null,
-    notes: document.getElementById('am-notes').value.trim(),
-    created_at: new Date().toISOString()
+  const approverUserId = computeApprover(otherMemberId, session.user.id);
+  const rec = {
+    id:uid(), aId, bId, type,
+    status: approverUserId ? 'pending' : 'accepted',
+    requestedBy: session.user.id,
+    approverUserId,
+    createdAt: Date.now()
   };
-  if (supabase) {
-    const { data, error } = await supabase.from('members').insert([member]).select().single();
-    if (error) return showToast('❌ ' + error.message);
-    members.unshift(data);
-  } else {
-    member.id = Date.now().toString();
-    members.unshift(member);
-  }
-  closeModal('add-member-modal');
-  showToast('✅ Member added!');
-  loadDashboard();
-  renderMembersGrid(document.getElementById('all-members'), members);
-  renderTree();
+  DB.relations.push(rec);
+  await stSet('relations', DB.relations);
+  return {ok:true, pending: !!approverUserId};
 }
 
-// ═══════════════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════════════
-async function loadDashboard() {
-  await loadMembers();
-  const fam = members.filter(m => m.relation_type === 'family').length;
-  const fri = members.filter(m => m.relation_type === 'friend').length;
-  document.getElementById('stat-total').textContent = members.length;
-  document.getElementById('stat-family').textContent = fam;
-  document.getElementById('stat-friends').textContent = fri;
-  document.getElementById('stat-messages').textContent = conversations.length;
-  renderMembersGrid(document.getElementById('recent-members'), members.slice(0, 6));
-  renderMembersGrid(document.getElementById('all-members'), members);
+function ownedMemberOptions(){
+  const ids = new Set();
+  if(session.user.memberId) ids.add(session.user.memberId);
+  DB.members.forEach(m => { if(m.addedBy===session.user.id) ids.add(m.id); });
+  return [...ids].map(id => getMember(id)).filter(Boolean);
 }
 
-// ═══════════════════════════════════════════════
-// FAMILY TREE (Canvas)
-// ═══════════════════════════════════════════════
-function renderTree() {
-  const container = document.getElementById('tree-container');
-  const canvas = document.getElementById('tree-canvas');
-  const ctx = canvas.getContext('2d');
-  const W = container.clientWidth;
-  const H = container.clientHeight;
-  canvas.width = W; canvas.height = H;
-
-  const filtered = treeFilter === 'family' ? members.filter(m => m.relation_type === 'family') : members;
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.save();
-  ctx.translate(treeOffsetX + W/2, treeOffsetY + H/2);
-  ctx.scale(treeScale, treeScale);
-
-  if (!filtered.length) {
-    ctx.fillStyle = '#6b7080';
-    ctx.font = '16px DM Sans, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('No members to display. Add some!', 0, 0);
-    ctx.restore();
-    return;
-  }
-
-  // Layout: center = you, ring around
-  const nodeW = 110, nodeH = 70, R = 200;
-  const total = filtered.length;
-  const nodes = filtered.map((m, i) => {
-    const angle = (i / total) * 2 * Math.PI - Math.PI/2;
-    const r = total <= 4 ? 180 : R + Math.floor(i/8) * 120;
-    return { m, x: Math.cos(angle) * r, y: Math.sin(angle) * r };
-  });
-
-  // Draw center (you)
-  drawNode(ctx, 0, 0, currentProfile?.first_name || 'You', 'Me', '#c9a96e', true);
-
-  // Draw edges
-  ctx.strokeStyle = 'rgba(201,169,110,0.2)';
-  ctx.lineWidth = 1.5;
-  nodes.forEach(({x, y}) => {
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(x, y); ctx.stroke();
-  });
-
-  // Draw member nodes
-  nodes.forEach(({m, x, y}) => {
-    const color = m.relation_type === 'family' ? '#c9a96e' : '#5b8ef0';
-    drawNode(ctx, x, y, m.first_name, formatRelLabel(m.relation_label), color, false);
-  });
-
-  ctx.restore();
+/* ============================= GENEALOGY COMPUTATION ============================= */
+function acceptedEdges(type){
+  return DB.relations.filter(r=>r.type===type && r.status==='accepted');
 }
-
-function drawNode(ctx, x, y, name, label, color, isCenter) {
-  const w = isCenter ? 120 : 100;
-  const h = isCenter ? 64 : 54;
-  const r = 12;
-
-  // Shadow
-  ctx.shadowColor = 'rgba(0,0,0,0.4)';
-  ctx.shadowBlur = 12;
-  ctx.shadowOffsetY = 4;
-
-  // Box
-  ctx.beginPath();
-  ctx.roundRect(x - w/2, y - h/2, w, h, r);
-  ctx.fillStyle = isCenter ? '#2a2040' : '#1e2330';
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-
-  // Border
-  ctx.strokeStyle = color;
-  ctx.lineWidth = isCenter ? 2.5 : 1.5;
-  ctx.stroke();
-
-  // Text
-  ctx.fillStyle = '#e8e4dc';
-  ctx.font = `${isCenter ? 600 : 500} ${isCenter ? 14 : 12}px DM Sans, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(truncate(name, 10), x, y - 8);
-  ctx.fillStyle = color;
-  ctx.font = `400 10px DM Sans, sans-serif`;
-  ctx.fillText(label, x, y + 10);
-}
-
-// Tree interaction
-const tc = document.getElementById('tree-container');
-tc.addEventListener('mousedown', e => { isDragging = true; dragStart = {x: e.clientX - treeOffsetX, y: e.clientY - treeOffsetY}; tc.style.cursor = 'grabbing'; });
-tc.addEventListener('mousemove', e => { if (!isDragging) return; treeOffsetX = e.clientX - dragStart.x; treeOffsetY = e.clientY - dragStart.y; renderTree(); });
-tc.addEventListener('mouseup', () => { isDragging = false; tc.style.cursor = 'grab'; });
-tc.addEventListener('mouseleave', () => { isDragging = false; tc.style.cursor = 'grab'; });
-tc.addEventListener('wheel', e => { e.preventDefault(); zoomTree(e.deltaY < 0 ? 1.1 : 0.9); }, { passive: false });
-
-function zoomTree(factor) { treeScale = Math.min(3, Math.max(0.3, treeScale * factor)); renderTree(); }
-function resetTree() { treeScale = 1; treeOffsetX = 0; treeOffsetY = 0; renderTree(); }
-function setTreeFilter(f, el) {
-  treeFilter = f;
-  document.querySelectorAll('#view-tree .filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderTree();
-}
-
-// ═══════════════════════════════════════════════
-// CHAT
-// ═══════════════════════════════════════════════
-async function loadConversations() {
-  if (supabase) {
-    const { data } = await supabase.from('conversations')
-      .select('*').contains('participants', [currentUser.id]).order('updated_at', { ascending: false });
-    if (data) conversations = data;
-  }
-  renderChatList();
-}
-
-function renderChatList() {
-  const el = document.getElementById('chat-list');
-  if (!conversations.length) {
-    el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">No conversations yet</div>`;
-    return;
-  }
-  el.innerHTML = conversations.map(c => {
-    const lastMsg = c.messages && c.messages.length ? c.messages[c.messages.length-1] : null;
-    const isGroup = c.type === 'group';
-    const avatarHtml = isGroup
-      ? `<div class="group-avatar">${(c.name||'G')[0]}</div>`
-      : `<div class="avatar" style="width:38px;height:38px;background:var(--surface2);color:var(--accent);font-size:15px;">${(c.name||'?')[0]}</div>`;
-    return `<div class="chat-item ${activeConvId === c.id ? 'active' : ''}" onclick="openConversation('${c.id}')">
-      ${avatarHtml}
-      <div style="flex:1;min-width:0;">
-        <div class="chat-item-name">${c.name || 'Chat'}</div>
-        <div class="chat-item-preview">${lastMsg ? lastMsg.text || (lastMsg.media ? '📷 Photo' : '') : 'No messages yet'}</div>
-      </div>
-      <div class="chat-item-time">${lastMsg ? lastMsg.time || '' : ''}</div>
-    </div>`;
-  }).join('');
-}
-
-function openConversation(id) {
-  activeConvId = id;
-  const conv = conversations.find(c => c.id === id);
-  if (!conv) return;
-  renderChatList();
-  const area = document.getElementById('chat-area');
-  const msgs = conv.messages || [];
-  area.innerHTML = `
-    <div class="chat-header">
-      ${conv.type === 'group' ? `<div class="group-avatar">${(conv.name||'G')[0]}</div>` : `<div class="avatar" style="width:36px;height:36px;background:var(--surface2);color:var(--accent);">${(conv.name||'?')[0]}</div>`}
-      <div>
-        <div style="font-weight:600;font-size:15px;">${conv.name||'Chat'}</div>
-        <div style="font-size:12px;color:var(--text3);">${conv.type === 'group' ? `${(conv.members||[]).length + 1} members` : 'Direct message'}</div>
-      </div>
-    </div>
-    <div class="chat-messages" id="msg-area"></div>
-    <div class="chat-input-area">
-      <label class="media-btn" title="Send Image">
-        📷
-        <input type="file" accept="image/*" style="display:none" onchange="sendImage(event,'${id}')">
-      </label>
-      <textarea class="chat-input" id="chat-input-${id}" placeholder="Type a message…" rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage('${id}');}"></textarea>
-      <button class="chat-send" onclick="sendMessage('${id}')">➤</button>
-    </div>
-  `;
-  renderMessages(msgs, conv);
-}
-
-function renderMessages(msgs, conv) {
-  const area = document.getElementById('msg-area');
-  if (!area) return;
-  if (!msgs.length) {
-    area.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:13px;margin:auto;">No messages yet. Say hi! 👋</div>`;
-    return;
-  }
-  area.innerHTML = msgs.map(msg => {
-    const isOwn = msg.sender === currentUser.id || msg.sender === 'demo-user';
-    const sender = isOwn ? 'You' : getSenderName(msg.sender, conv);
-    return `<div class="msg ${isOwn ? 'own' : 'other'}">
-      ${!isOwn && conv.type === 'group' ? `<div class="msg-sender">${sender}</div>` : ''}
-      <div class="msg-bubble">
-        ${msg.text ? msg.text : ''}
-        ${msg.media ? `<img src="${msg.media}" class="msg-image" alt="image">` : ''}
-      </div>
-      <div class="msg-time">${msg.time || ''}</div>
-    </div>`;
-  }).join('');
-  area.scrollTop = area.scrollHeight;
-}
-
-function getSenderName(sid, conv) {
-  const m = members.find(x => x.id === sid);
-  return m ? m.first_name : 'Member';
-}
-
-async function sendMessage(convId) {
-  const input = document.getElementById(`chat-input-${convId}`);
-  const text = input?.value?.trim();
-  if (!text) return;
-  input.value = '';
-  const msg = { sender: currentUser.id, text, time: now() };
-  await pushMessage(convId, msg);
-}
-
-async function sendImage(event, convId) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async e => {
-    const msg = { sender: currentUser.id, media: e.target.result, time: now() };
-    await pushMessage(convId, msg);
-  };
-  reader.readAsDataURL(file);
-}
-
-async function pushMessage(convId, msg) {
-  const conv = conversations.find(c => c.id === convId);
-  if (!conv) return;
-  conv.messages = [...(conv.messages || []), msg];
-  if (supabase) {
-    await supabase.from('conversations').update({ messages: conv.messages, updated_at: new Date().toISOString() }).eq('id', convId);
-  }
-  renderMessages(conv.messages, conv);
-  renderChatList();
-}
-
-function startChatWith(member) {
-  navigate('chat');
-  const existing = conversations.find(c => c.type === 'direct' && c.member_id === member.id);
-  if (existing) { openConversation(existing.id); return; }
-  const conv = {
-    id: Date.now().toString(), type: 'direct', name: `${member.first_name} ${member.last_name||''}`.trim(),
-    member_id: member.id, participants: [currentUser.id, member.id],
-    messages: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-  };
-  if (supabase) {
-    supabase.from('conversations').insert([conv]).select().single().then(({ data }) => {
-      if (data) { conversations.unshift(data); renderChatList(); openConversation(data.id); }
+function ancestorsOf(memberId){
+  const parentEdges = acceptedEdges('parent-of');
+  let frontier = [memberId];
+  const generations = [];
+  const seen = new Set([memberId]);
+  while(true){
+    const parents = [];
+    frontier.forEach(childId=>{
+      parentEdges.filter(e=>e.bId===childId).forEach(e=>{
+        if(!seen.has(e.aId)){ seen.add(e.aId); parents.push(e.aId); }
+      });
     });
-  } else {
-    conversations.unshift(conv);
-    renderChatList();
-    openConversation(conv.id);
+    if(parents.length===0) break;
+    generations.push(parents);
+    frontier = parents;
+    if(generations.length>10) break;
   }
+  return generations;
 }
 
-function openNewChatModal() {
-  const list = document.getElementById('new-chat-list');
-  list.innerHTML = members.map(m => `
-    <div class="chat-item" onclick="startChatWith(${JSON.stringify(m).replace(/"/g,'&quot;')});closeModal('new-chat-modal');" style="cursor:pointer;">
-      <div class="avatar" style="width:38px;height:38px;background:var(--surface2);color:var(--accent);">${(m.first_name||'?')[0]}</div>
-      <div>
-        <div class="chat-item-name">${m.first_name} ${m.last_name||''}</div>
-        <div class="chat-item-preview">${formatRelLabel(m.relation_label)}</div>
+/* ============================= RENDER: SHELL ============================= */
+const NAV_ITEMS = [
+  {key:'tree', label:'Tree View', ic:'🌳'},
+  {key:'members', label:'Add Member', ic:'➕'},
+  {key:'add-relation', label:'Add Relation', ic:'🔗'},
+  {key:'ancestors', label:'Ancestors', ic:'🧬'},
+  {key:'search', label:'Search', ic:'🔍'},
+  {key:'chat', label:'Family Chat', ic:'💬'},
+  {key:'requests', label:'Requests', ic:'📜'},
+  {key:'suggestions', label:'Suggestions', ic:'✨'},
+];
+
+function logoSVG(){
+  return `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 36V18" stroke="#DDB05B" stroke-width="2" stroke-linecap="round"/>
+    <path d="M20 24C20 24 12 22 10 14" stroke="#EFE7D2" stroke-width="2" stroke-linecap="round"/>
+    <path d="M20 20C20 20 28 18 30 10" stroke="#EFE7D2" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="20" cy="14" r="3.4" fill="#DDB05B"/>
+    <circle cx="9" cy="12" r="2.6" fill="#7C9C87"/>
+    <circle cx="31" cy="8" r="2.6" fill="#7C9C87"/>
+  </svg>`;
+}
+function branchRule(){
+  return `<div class="branch-rule"><svg viewBox="0 0 600 22" preserveAspectRatio="none">
+    <path d="M0 11 H240" stroke="var(--line)" stroke-width="1.5"/>
+    <path d="M360 11 H600" stroke="var(--line)" stroke-width="1.5"/>
+    <path d="M240 11 C 270 11, 270 2, 300 2 C 330 2, 330 11, 360 11" stroke="var(--brass)" stroke-width="1.6" fill="none"/>
+    <circle cx="300" cy="2" r="2.6" fill="var(--brass)"/>
+  </svg></div>`;
+}
+
+function pendingCountForUser(){
+  if(!session.user) return 0;
+  return DB.relations.filter(r=>r.status==='pending' && r.approverUserId===session.user.id).length;
+}
+
+function shellHTML(innerHTML){
+  const pending = pendingCountForUser();
+  return `
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        ${logoSVG()}
+        <div class="brand-text"><div class="t1">Rootline</div><div class="t2">A Family Ledger</div></div>
+      </div>
+      <div class="navlist">
+        ${NAV_ITEMS.map(n => `
+          <button class="navbtn ${view===n.key?'active':''}" data-nav="${n.key}">
+            <span class="ic">${n.ic}</span> ${n.label}
+            ${n.key==='requests' && pending>0 ? `<span class="badge">${pending}</span>` : ''}
+          </button>
+        `).join('')}
+      </div>
+      <div class="sidebar-foot">
+        <div class="who">Signed in as<b>${esc(fullName(getMember(session.user.memberId)))}</b></div>
+        <button class="btn btn-outline btn-sm" data-action="logout" style="width:100%;">Log out</button>
+      </div>
+    </aside>
+    <main><div class="container">${innerHTML}</div></main>
+  </div>`;
+}
+
+function emptyState(icon, title, body){
+  return `<div class="empty-state">
+    <div style="font-size:2.4rem;">${icon}</div>
+    <h3>${esc(title)}</h3>
+    <p>${esc(body)}</p>
+  </div>`;
+}
+
+/* ============================= RENDER: AUTH ============================= */
+function renderAuth(){
+  const unclaimed = DB.members.filter(m => !getUserByMember(m.id));
+  const html = `
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <svg viewBox="0 0 40 40" width="34" height="34" fill="none">
+          <path d="M20 36V18" stroke="#B07F2C" stroke-width="2" stroke-linecap="round"/>
+          <path d="M20 24C20 24 12 22 10 14" stroke="#2E5136" stroke-width="2" stroke-linecap="round"/>
+          <path d="M20 20C20 20 28 18 30 10" stroke="#2E5136" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="20" cy="14" r="3.4" fill="#B07F2C"/>
+          <circle cx="9" cy="12" r="2.6" fill="#7C9C87"/>
+          <circle cx="31" cy="8" r="2.6" fill="#7C9C87"/>
+        </svg>
+        <h1 style="font-size:1.5rem;">Rootline</h1>
+      </div>
+      <p class="hint" style="margin-bottom:20px;">A shared ledger where your family records its branches, chats, and asks each other to confirm how you're related.</p>
+      <div class="auth-tabs">
+        <button class="auth-tab ${authTab==='login'?'active':''}" data-authtab="login">Log in</button>
+        <button class="auth-tab ${authTab==='register'?'active':''}" data-authtab="register">Join the family</button>
+      </div>
+      ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
+      ${authTab==='login' ? `
+        <form data-form="login">
+          <div class="field"><label>Username</label><input name="username" required autocomplete="username"/></div>
+          <div class="field"><label>Password</label><input name="password" type="password" required autocomplete="current-password"/></div>
+          <button class="btn btn-primary" style="width:100%;" type="submit">Log in</button>
+        </form>
+      ` : `
+        <form data-form="register">
+          <div class="field"><label>Choose a username</label><input name="username" required/></div>
+          <div class="field"><label>Choose a password</label><input name="password" type="password" required minlength="4"/></div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="regmode" value="new" ${regMode==='new'?'checked':''} data-regmode/> Create my profile</label>
+            <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${regMode==='claim'?'checked':''} data-regmode ${unclaimed.length===0?'disabled':''}/> Claim an existing profile</label>
+          </div>
+          ${regMode==='new' ? `
+            <div class="row">
+              <div class="col field"><label>First name</label><input name="first" required/></div>
+              <div class="col field"><label>Last name</label><input name="last" required/></div>
+            </div>
+            <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
+          ` : `
+            <div class="field">
+              <label>Which profile is you?</label>
+              <select name="claimId" required>
+                ${unclaimed.length ? unclaimed.map(m=>`<option value="${m.id}">${esc(fullName(m))} ${m.birthYear?('('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles yet</option>'}
+              </select>
+              <div class="hint">These are profiles a relative already added to the tree but hasn't linked to an account yet.</div>
+            </div>
+          `}
+          <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create account</button>
+        </form>
+      `}
+      <p class="hint" style="margin-top:16px;">This is a shared family space — names, relations and chat here are visible to everyone who has this ledger's link, so only share it with your family.</p>
+    </div>
+  </div>`;
+  document.getElementById('root').innerHTML = html;
+}
+
+/* ============================= RENDER: TREE ============================= */
+function renderTree(){
+  const members = DB.members;
+  let body;
+  if(members.length===0){
+    body = emptyState('🌱','This ledger is empty','Add your first family member to start growing the tree.');
+  } else {
+    const parentEdges = acceptedEdges('parent-of');
+    const spouseEdges = acceptedEdges('spouse-of');
+    const level = {};
+    members.forEach(m=>level[m.id]=0);
+    for(let i=0;i<members.length+2;i++){
+      let changed=false;
+      parentEdges.forEach(e=>{
+        if(level[e.bId] < level[e.aId]+1){ level[e.bId]=level[e.aId]+1; changed=true; }
+      });
+      if(!changed) break;
+    }
+    const byLevel = {};
+    members.forEach(m=>{ (byLevel[level[m.id]] = byLevel[level[m.id]]||[]).push(m); });
+    // nudge spouses adjacent within a level
+    Object.values(byLevel).forEach(arr=>{
+      spouseEdges.forEach(e=>{
+        const ia = arr.findIndex(m=>m.id===e.aId), ib = arr.findIndex(m=>m.id===e.bId);
+        if(ia>-1 && ib>-1 && Math.abs(ia-ib)!==1){
+          const item = arr.splice(ib,1)[0];
+          arr.splice(ia+1,0,item);
+        }
+      });
+    });
+    const levels = Object.keys(byLevel).map(Number).sort((a,b)=>a-b);
+    const colW = 168, rowH = 150, padTop = 46, padSide = 70;
+    const maxCount = Math.max(...levels.map(l=>byLevel[l].length));
+    const width = Math.max(760, maxCount*colW + padSide*2);
+    const height = levels.length*rowH + padTop + 60;
+    const pos = {};
+    levels.forEach(l=>{
+      const arr = byLevel[l];
+      const totalW = arr.length*colW;
+      const startX = (width-totalW)/2 + colW/2;
+      arr.forEach((m,i)=>{ pos[m.id] = {x:startX+i*colW, y:padTop + l*rowH}; });
+    });
+
+    let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+    parentEdges.forEach(e=>{
+      const p = pos[e.aId], c = pos[e.bId];
+      if(!p||!c) return;
+      const midY = (p.y+c.y)/2;
+      svg += `<path d="M ${p.x} ${p.y+22} C ${p.x} ${midY}, ${c.x} ${midY}, ${c.x} ${c.y-22}" stroke="#2E5136" stroke-width="2" fill="none" opacity="0.75"/>`;
+      svg += `<circle cx="${(p.x+c.x)/2}" cy="${midY}" r="2.6" fill="#B07F2C"/>`;
+    });
+    spouseEdges.forEach(e=>{
+      const a = pos[e.aId], b = pos[e.bId];
+      if(!a||!b) return;
+      svg += `<line x1="${a.x+24}" y1="${a.y}" x2="${b.x-24}" y2="${b.y}" stroke="#7C9C87" stroke-width="2" stroke-dasharray="4 3"/>`;
+    });
+    members.forEach(m=>{
+      const p = pos[m.id]; if(!p) return;
+      const col = colorFor(m.id);
+      svg += `<g>
+        <circle cx="${p.x}" cy="${p.y}" r="24" fill="${col}"/>
+        <text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="#fff" font-family="Fraunces, serif" font-size="14" font-weight="700">${esc(initials(m))}</text>
+        <text x="${p.x}" y="${p.y+42}" text-anchor="middle" fill="#20291F" font-family="'Source Sans 3', sans-serif" font-size="12" font-weight="700">${esc(fullName(m))}</text>
+        <text x="${p.x}" y="${p.y+56}" text-anchor="middle" fill="#6b6355" font-family="'IBM Plex Mono', monospace" font-size="10">${esc(fmtYear(m))}</text>
+      </g>`;
+    });
+    svg += `</svg>`;
+    body = `<div class="tree-scroll">${svg}</div>
+      <div class="tree-legend">
+        <span><span class="legend-swatch" style="background:#2E5136;"></span> Parent → child</span>
+        <span><span class="legend-swatch" style="background:#7C9C87; background-image:repeating-linear-gradient(to right, #7C9C87 0 4px, transparent 4px 7px);"></span> Spouse / partner</span>
+      </div>`;
+  }
+  return `
+    <div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} recorded</div>
+    <h1>The family tree</h1>
+    <p class="hint">Confirmed relations only — proposed ones show up under Requests until accepted.</p>
+    ${branchRule()}
+    ${body}
+  `;
+}
+
+/* ============================= RENDER: ADD MEMBER ============================= */
+function renderAddMember(){
+  return `
+    <div class="eyebrow">Record a relative</div>
+    <h1>Add a family member</h1>
+    <p class="hint">Add anyone in the family — living or passed, whether or not they'll ever log in themselves.</p>
+    ${branchRule()}
+    <div class="row">
+      <div class="col">
+        <form data-form="add-member">
+          <div class="row">
+            <div class="col field"><label>First name</label><input name="first" required/></div>
+            <div class="col field"><label>Last name</label><input name="last" required/></div>
+          </div>
+          <div class="row">
+            <div class="col field"><label>Gender</label>
+              <select name="gender"><option value="">Unspecified</option><option>Female</option><option>Male</option><option>Other</option></select>
+            </div>
+            <div class="col field"><label>Birth year</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
+            <div class="col field"><label>Death year (if applicable)</label><input name="deathYear" type="number" min="1600" max="2100"/></div>
+          </div>
+          <div class="field"><label>Notes / bio</label><textarea name="bio" rows="3" placeholder="Anything worth remembering about them..."></textarea></div>
+          <button class="btn btn-primary" type="submit">Add to the ledger</button>
+        </form>
+      </div>
+      <div class="col">
+        <div class="card" style="background:#fff;">
+          <h3 style="font-size:1rem;">What happens next?</h3>
+          <p class="hint">This person is added as an unclaimed profile. You can immediately add a relation for them under <b>Add Relation</b>. If they join Rootline later, they can claim this profile during registration.</p>
+        </div>
       </div>
     </div>
-  `).join('') || '<div style="padding:20px;color:var(--text3);font-size:13px;text-align:center;">No members added yet</div>';
-  openModal('new-chat-modal');
+  `;
 }
 
-function openGroupChatModal() {
-  groupSelected = [];
-  const list = document.getElementById('group-member-list');
-  list.innerHTML = members.map(m => `
-    <label class="chat-item" style="cursor:pointer;">
-      <input type="checkbox" value="${m.id}" onchange="toggleGroupMember('${m.id}')" style="margin:0;width:auto;margin-bottom:0;margin-right:4px;">
-      <div class="avatar" style="width:34px;height:34px;background:var(--surface2);color:var(--accent);font-size:13px;">${(m.first_name||'?')[0]}</div>
-      <div style="font-size:14px;">${m.first_name} ${m.last_name||''}</div>
-    </label>
-  `).join('') || '<div style="padding:20px;color:var(--text3);text-align:center;font-size:13px;">Add members first</div>';
-  document.getElementById('gc-name').value = '';
-  openModal('group-chat-modal');
+/* ============================= RENDER: ADD RELATION ============================= */
+function renderAddRelation(){
+  const mine = ownedMemberOptions();
+  const others = DB.members;
+  const defYour = addRelationDefaults?.your || session.user.memberId || (mine[0] && mine[0].id) || '';
+  const defOther = addRelationDefaults?.other || '';
+  const defType = addRelationDefaults?.type || 'parent';
+  return `
+    <div class="eyebrow">Link two branches</div>
+    <h1>Add a relation</h1>
+    <p class="hint">If the other person has their own account, this will wait in their Requests tab for confirmation.</p>
+    ${branchRule()}
+    <form data-form="add-relation" style="max-width:640px;">
+      <div class="field">
+        <label>This is about</label>
+        <select name="your">
+          ${mine.map(m=>`<option value="${m.id}" ${m.id===defYour?'selected':''}>${m.id===session.user.memberId?'Me — ':''}${esc(fullName(m))}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Relation</label>
+        <select name="type">
+          <option value="parent" ${defType==='parent'?'selected':''}>...has this parent</option>
+          <option value="child" ${defType==='child'?'selected':''}>...has this child</option>
+          <option value="spouse" ${defType==='spouse'?'selected':''}>...is married to / partnered with</option>
+          <option value="sibling" ${defType==='sibling'?'selected':''}>...is the sibling of</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Other family member</label>
+        <select name="other" required>
+          <option value="">Select a person…</option>
+          ${others.map(m=>`<option value="${m.id}" ${m.id===defOther?'selected':''}>${esc(fullName(m))} ${fmtYear(m)?('— '+fmtYear(m)):''}</option>`).join('')}
+        </select>
+        <div class="hint">Don't see them? <button type="button" class="btn btn-outline btn-sm" data-nav="members" style="margin-top:6px;">Add a new member</button></div>
+      </div>
+      <button class="btn btn-primary" type="submit">Propose this relation</button>
+    </form>
+  `;
 }
 
-function toggleGroupMember(id) {
-  if (groupSelected.includes(id)) groupSelected = groupSelected.filter(x => x !== id);
-  else groupSelected.push(id);
-}
-
-async function createGroupChat() {
-  const name = document.getElementById('gc-name').value.trim();
-  if (!name) return showToast('Enter a group name');
-  if (!groupSelected.length) return showToast('Select at least one member');
-  const conv = {
-    id: Date.now().toString(), type: 'group', name,
-    members: groupSelected, participants: [currentUser.id, ...groupSelected],
-    messages: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-  };
-  if (supabase) {
-    const { data } = await supabase.from('conversations').insert([conv]).select().single();
-    if (data) { conversations.unshift(data); }
+/* ============================= RENDER: ANCESTORS ============================= */
+function renderAncestors(){
+  const options = DB.members;
+  const sel = ancestorFor || (options[0] && options[0].id) || '';
+  let body = '';
+  if(!sel){
+    body = emptyState('🧬','No members yet','Add family members first, then come back to trace their ancestry.');
   } else {
-    conversations.unshift(conv);
+    const gens = ancestorsOf(sel);
+    if(gens.length===0){
+      body = emptyState('🌱','No ancestors recorded', fullName(getMember(sel)) + "'s parents haven't been recorded yet. Add a relation to build this out.");
+    } else {
+      const labels = ['Parents','Grandparents','Great-grandparents'];
+      body = gens.map((gen,i)=>{
+        const label = labels[i] || `${'Great-'.repeat(i-1)}Great-grandparents`;
+        return `<div style="margin-bottom:20px;">
+          <div class="eyebrow">Generation ${i+1}</div>
+          <h3 style="font-size:1.05rem;">${label}</h3>
+          <div class="member-grid">
+            ${gen.map(id=>memberCardHTML(getMember(id))).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
   }
-  closeModal('group-chat-modal');
-  renderChatList();
-  openConversation(conv.id);
-  showToast('✅ Group created!');
+  return `
+    <div class="eyebrow">Trace a lineage</div>
+    <h1>Ancestors</h1>
+    ${branchRule()}
+    <div class="field" style="max-width:360px;">
+      <label>Show ancestors of</label>
+      <select data-change="ancestor-select">
+        ${options.map(m=>`<option value="${m.id}" ${m.id===sel?'selected':''}>${esc(fullName(m))}</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-top:22px;">${body}</div>
+  `;
 }
 
-async function subscribeToMessages() {
-  if (!supabase) return;
-  realtimeChannel = supabase.channel('conversations')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, payload => {
-      const updated = payload.new;
-      const idx = conversations.findIndex(c => c.id === updated.id);
-      if (idx >= 0) conversations[idx] = updated;
-      else conversations.unshift(updated);
-      renderChatList();
-      if (activeConvId === updated.id) {
-        const conv = conversations.find(c => c.id === updated.id);
-        if (conv) renderMessages(conv.messages || [], conv);
-      }
-    }).subscribe();
+/* ============================= RENDER: SEARCH ============================= */
+function memberCardHTML(m){
+  if(!m) return '';
+  const relCount = DB.relations.filter(r=>r.status==='accepted' && (r.aId===m.id||r.bId===m.id)).length;
+  const owner = getUserByMember(m.id);
+  return `<div class="member-card">
+    <div class="avatar" style="background:${colorFor(m.id)};">${esc(initials(m))}</div>
+    <div>
+      <div class="member-name">${esc(fullName(m))}</div>
+      <div class="member-meta">${esc(fmtYear(m)) || '&nbsp;'}</div>
+      <div class="member-meta">${m.gender||''}</div>
+      <span class="member-tag">${relCount} relation${relCount===1?'':'s'}</span>
+      ${!owner ? `<span class="member-tag" style="background:#F3E3C4;color:#7a5a12;">unclaimed</span>` : ''}
+    </div>
+  </div>`;
+}
+function renderSearch(){
+  const q = searchQuery.trim().toLowerCase();
+  const results = DB.members.filter(m => !q || fullName(m).toLowerCase().includes(q));
+  return `
+    <div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} in the ledger</div>
+    <h1>Search members</h1>
+    ${branchRule()}
+    <div class="field" style="max-width:420px;">
+      <label>Name or surname</label>
+      <input data-change="search-input" placeholder="Type name or surname…" value="${esc(searchQuery)}"/>
+    </div>
+    ${results.length ? `<div class="member-grid">${results.map(memberCardHTML).join('')}</div>` : emptyState('🔍','No matches', q ? `Nobody in the ledger matches "${searchQuery}".` : 'No family members recorded yet.')}
+  `;
 }
 
-// ═══════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════
-function navigate(view) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById(`view-${view}`)?.classList.add('active');
-  document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
-
-  if (view === 'tree') { setTimeout(renderTree, 100); }
-  if (view === 'profile') renderProfile();
-  if (view === 'chat') loadConversations();
-  if (view === 'members') renderMembersGrid(document.getElementById('all-members'), members);
+/* ============================= RENDER: CHAT ============================= */
+function renderChat(){
+  const msgs = [...DB.chat].sort((a,b)=>a.ts-b.ts);
+  return `
+    <div class="eyebrow">Everyone in the family can see this</div>
+    <h1>Family chat</h1>
+    ${branchRule()}
+    <div class="chat-window" id="chat-window">
+      ${msgs.length ? msgs.map(m=>`
+        <div class="msg ${m.userId===session.user.id?'mine':'theirs'}">
+          <span class="who">${esc(m.username)}</span>
+          ${esc(m.text)}
+          <span class="ts">${fmtTime(m.ts)}</span>
+        </div>
+      `).join('') : `<div class="hint" style="margin:auto;text-align:center;">No messages yet — say hello to the family 👋</div>`}
+    </div>
+    <form data-form="chat" class="chat-input-row">
+      <input name="text" placeholder="Write a message…" autocomplete="off" required/>
+      <button class="btn btn-primary" type="submit">Send</button>
+    </form>
+  `;
 }
 
-// ═══════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════
-function calcAge(dob) {
-  if (!dob) return null;
-  const b = new Date(dob); const today = new Date();
-  let age = today.getFullYear() - b.getFullYear();
-  if (today.getMonth() < b.getMonth() || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) age--;
-  return age;
+/* ============================= RENDER: REQUESTS ============================= */
+function relLabel(r, viewerMemberId){
+  const a = getMember(r.aId), b = getMember(r.bId);
+  if(r.type==='parent-of') return `${fullName(a)} is a parent of ${fullName(b)}`;
+  if(r.type==='spouse-of') return `${fullName(a)} is married to / partnered with ${fullName(b)}`;
+  return `${fullName(a)} is a sibling of ${fullName(b)}`;
 }
-function formatRelLabel(l) {
-  if (!l) return '';
-  return l.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
-}
-function truncate(str, n) { return str && str.length > n ? str.slice(0, n) + '…' : str; }
-function now() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 3000);
-}
-function showLogin() { document.getElementById('login-form').style.display = ''; document.getElementById('register-form').style.display = 'none'; }
-function showRegister() { document.getElementById('login-form').style.display = 'none'; document.getElementById('register-form').style.display = ''; }
+function renderRequests(){
+  const incoming = DB.relations.filter(r=>r.status==='pending' && r.approverUserId===session.user.id);
+  const outgoing = DB.relations.filter(r=>r.status==='pending' && r.requestedBy===session.user.id && r.approverUserId!==session.user.id);
+  const history = DB.relations.filter(r=>r.status!=='pending' && (r.requestedBy===session.user.id || r.approverUserId===session.user.id)).slice(-8).reverse();
+  return `
+    <div class="eyebrow">Confirmations keep the tree accurate</div>
+    <h1>Requests</h1>
+    ${branchRule()}
+    <h3>Waiting on you (${incoming.length})</h3>
+    ${incoming.length ? incoming.map(r=>`
+      <div class="req-card">
+        <div>${relLabel(r)} <span class="pill pending">pending</span></div>
+        <div class="req-actions">
+          <button class="btn btn-primary btn-sm" data-action="accept-rel" data-id="${r.id}">Accept</button>
+          <button class="btn btn-danger btn-sm" data-action="decline-rel" data-id="${r.id}">Decline</button>
+        </div>
+      </div>`).join('') : `<p class="hint">Nothing needs your confirmation right now.</p>`}
 
-// Close modals on overlay click
-document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+    <h3 style="margin-top:26px;">Waiting on others (${outgoing.length})</h3>
+    ${outgoing.length ? outgoing.map(r=>`
+      <div class="req-card">
+        <div>${relLabel(r)} <span class="pill pending">pending</span></div>
+      </div>`).join('') : `<p class="hint">You have no proposals awaiting a reply.</p>`}
+
+    <h3 style="margin-top:26px;">Recent history</h3>
+    ${history.length ? history.map(r=>`
+      <div class="req-card">
+        <div>${relLabel(r)}</div>
+        <span class="pill ${r.status}">${r.status}</span>
+      </div>`).join('') : `<p class="hint">No resolved requests yet.</p>`}
+  `;
+}
+
+/* ============================= RENDER: SUGGESTIONS ============================= */
+function computeSuggestions(){
+  const out = [];
+  const members = DB.members;
+  const dismissedKeys = new Set(dismissedSuggestions.filter(d=>d.username===session.user.username).map(d=>d.pairKey));
+  for(let i=0;i<members.length;i++){
+    for(let j=i+1;j<members.length;j++){
+      const a = members[i], b = members[j];
+      if(!a.last || !b.last) continue;
+      if(a.last.toLowerCase() !== b.last.toLowerCase()) continue;
+      const anyRel = DB.relations.some(r => r.status!=='declined' && ((r.aId===a.id&&r.bId===b.id)||(r.aId===b.id&&r.bId===a.id)));
+      if(anyRel) continue;
+      const key = [a.id,b.id].sort().join('|');
+      if(dismissedKeys.has(key)) continue;
+      out.push({a,b,key});
+      if(out.length>=20) return out;
+    }
+  }
+  return out;
+}
+function renderSuggestions(){
+  const sugg = computeSuggestions();
+  return `
+    <div class="eyebrow">Based on shared surnames</div>
+    <h1>Suggestions</h1>
+    <p class="hint">Rootline noticed these people share a surname but aren't linked in the tree yet.</p>
+    ${branchRule()}
+    ${sugg.length ? sugg.map(s=>`
+      <div class="req-card">
+        <div>Could <b>${esc(fullName(s.a))}</b> and <b>${esc(fullName(s.b))}</b> be related? They share the surname "${esc(s.a.last)}".</div>
+        <div class="req-actions">
+          <button class="btn btn-primary btn-sm" data-action="propose-suggestion" data-a="${s.a.id}" data-b="${s.b.id}">Propose relation</button>
+          <button class="btn btn-outline btn-sm" data-action="dismiss-suggestion" data-key="${s.key}">Dismiss</button>
+        </div>
+      </div>
+    `).join('') : emptyState('✨','No suggestions right now', 'Add more family members and Rootline will look for likely connections.')}
+  `;
+}
+
+/* ============================= MASTER RENDER ============================= */
+function render(){
+  if(!loaded){
+    document.getElementById('root').innerHTML = `<div class="auth-wrap"><p style="font-family:var(--font-display);font-size:1.2rem;">Opening the ledger…</p></div>`;
+    return;
+  }
+  if(!session.user){
+    renderAuth();
+    return;
+  }
+  let inner = '';
+  if(view==='tree') inner = renderTree();
+  else if(view==='members') inner = renderAddMember();
+  else if(view==='add-relation') inner = renderAddRelation();
+  else if(view==='ancestors') inner = renderAncestors();
+  else if(view==='search') inner = renderSearch();
+  else if(view==='chat') inner = renderChat();
+  else if(view==='requests') inner = renderRequests();
+  else if(view==='suggestions') inner = renderSuggestions();
+  document.getElementById('root').innerHTML = shellHTML(inner);
+  if(view==='chat'){
+    const w = document.getElementById('chat-window');
+    if(w) w.scrollTop = w.scrollHeight;
+  }
+}
+
+/* ============================= EVENT DELEGATION ============================= */
+document.addEventListener('click', async (e)=>{
+  const nav = e.target.closest('[data-nav]');
+  if(nav){ view = nav.getAttribute('data-nav'); addRelationDefaults=null; render(); return; }
+
+  const authTabBtn = e.target.closest('[data-authtab]');
+  if(authTabBtn){ authTab = authTabBtn.getAttribute('data-authtab'); authError=''; render(); return; }
+
+  const action = e.target.closest('[data-action]');
+  if(action){
+    const act = action.getAttribute('data-action');
+    if(act==='logout'){ session.user=null; view='tree'; render(); return; }
+
+    if(act==='accept-rel' || act==='decline-rel'){
+      const id = action.getAttribute('data-id');
+      const r = DB.relations.find(x=>x.id===id);
+      if(r){ r.status = act==='accept-rel' ? 'accepted' : 'declined'; await stSet('relations', DB.relations); render(); }
+      return;
+    }
+    if(act==='propose-suggestion'){
+      const a = action.getAttribute('data-a'), b = action.getAttribute('data-b');
+      const mine = ownedMemberOptions().map(m=>m.id);
+      const yourId = mine.includes(a) ? a : (mine.includes(b) ? b : a);
+      const otherId = yourId===a ? b : a;
+      addRelationDefaults = {your:yourId, other:otherId, type:'sibling'};
+      view = 'add-relation';
+      render();
+      return;
+    }
+    if(act==='dismiss-suggestion'){
+      const key = action.getAttribute('data-key');
+      dismissedSuggestions.push({username:session.user.username, pairKey:key});
+      render();
+      return;
+    }
+  }
 });
 
-// ═══════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════
-// Called once the Supabase SDK script has loaded (or failed)
-function bootApp() {
-  const ok = initSupabase();
-  if (!ok) {
-    const notice = document.getElementById('setup-notice');
-    if (notice) notice.style.display = 'block';
-  } else {
-    checkSession();
-  }
+document.addEventListener('change', (e)=>{
+  if(e.target.matches('[data-regmode]')){ regMode = e.target.value; render(); return; }
+  if(e.target.matches('[data-change="ancestor-select"]')){ ancestorFor = e.target.value; render(); return; }
+  if(e.target.matches('[data-change="search-input"]')){ searchQuery = e.target.value; render(); return; }
+});
+document.addEventListener('input', (e)=>{
+  if(e.target.matches('[data-change="search-input"]')){ searchQuery = e.target.value; renderSearchOnly(); }
+});
+function renderSearchOnly(){
+  // lightweight re-render for the search box so focus isn't lost while typing
+  const el = document.querySelector('main .container');
+  if(el) el.innerHTML = renderSearch();
 }
 
-// Fallback: if DOM wasn't ready yet when SDK loaded, wait for it
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function waitForSdk() {
-    // bootApp() will be called by the script onload above
-  });
-}
+document.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const form = e.target.closest('[data-form]');
+  if(!form) return;
+  const type = form.getAttribute('data-form');
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  if(type==='login'){
+    const u = DB.users.find(x=>x.username.toLowerCase()===String(data.username).trim().toLowerCase() && x.password===data.password);
+    if(!u){ authError = 'Username or password not recognised.'; render(); return; }
+    session.user = u; authError=''; view='tree'; render(); return;
+  }
+
+  if(type==='register'){
+    const uname = String(data.username).trim();
+    if(!uname || !data.password){ authError='Please fill in all fields.'; render(); return; }
+    if(DB.users.some(x=>x.username.toLowerCase()===uname.toLowerCase())){ authError='That username is already taken.'; render(); return; }
+    let memberId;
+    if(regMode==='claim'){
+      if(!data.claimId){ authError='Choose a profile to claim.'; render(); return; }
+      memberId = data.claimId;
+    } else {
+      if(!data.first || !data.last){ authError='Please provide a first and last name.'; render(); return; }
+      const m = { id:uid(), first:data.first.trim(), last:data.last.trim(), gender:'', birthYear:data.birthYear?Number(data.birthYear):null, deathYear:null, bio:'', addedBy:null };
+      DB.members.push(m);
+      await stSet('members', DB.members);
+      memberId = m.id;
+    }
+    const user = { id:uid(), username:uname, password:data.password, memberId };
+    DB.users.push(user);
+    await stSet('users', DB.users);
+    session.user = user; authError=''; view='tree'; regMode='new'; render(); return;
+  }
+
+  if(type==='add-member'){
+    const m = {
+      id:uid(), first:data.first.trim(), last:data.last.trim(), gender:data.gender||'',
+      birthYear:data.birthYear?Number(data.birthYear):null, deathYear:data.deathYear?Number(data.deathYear):null,
+      bio:data.bio||'', addedBy:session.user.id
+    };
+    DB.members.push(m);
+    await stSet('members', DB.members);
+    addRelationDefaults = {your:session.user.memberId, other:m.id, type:'sibling'};
+    view = 'add-relation';
+    render();
+    return;
+  }
+
+  if(type==='add-relation'){
+    if(!data.other){ render(); return; }
+    const res = await createRelation(data.your, data.other, data.type);
+    addRelationDefaults=null;
+    view = 'requests';
+    render();
+    if(!res.ok){ alert(res.msg); }
+    return;
+  }
+
+  if(type==='chat'){
+    const msg = { id:uid(), userId:session.user.id, username:session.user.username, text:data.text.trim(), ts:Date.now() };
+    if(!msg.text) return;
+    DB.chat.push(msg);
+    await stSet('chat', DB.chat);
+    form.reset();
+    render();
+    return;
+  }
+});
+
+/* ============================= INIT ============================= */
+(async function init(){
+  const [users, members, relations, chat] = await Promise.all([
+    stGet('users'), stGet('members'), stGet('relations'), stGet('chat')
+  ]);
+  DB.users = users || [];
+  DB.members = members || [];
+  DB.relations = relations || [];
+  DB.chat = chat || [];
+  loaded = true;
+  render();
+})();
 </script>
 </body>
 </html>
