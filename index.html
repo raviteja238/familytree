@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rootline — A Family Ledger</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2/dist/svg2pdf.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -315,6 +317,41 @@ async function joinDefaultConversation(userId){
   if(!error) DB.conversationMembers.push({conversationId:fam.id, userId});
 }
 
+/* ============================= PDF EXPORT ============================= */
+async function exportTreeToPdf(){
+  const btn = document.getElementById('export-pdf-btn');
+  try{
+    if(typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF){
+      alert("The PDF export library didn't load — check your internet connection and try again.");
+      return;
+    }
+    const svgEl = document.getElementById('tree-svg');
+    if(!svgEl){ alert("Add some family members first — there's nothing to export yet."); return; }
+    if(btn){ btn.disabled = true; btn.textContent = 'Preparing PDF…'; }
+
+    const { jsPDF } = window.jspdf;
+    const svgWidth = parseFloat(svgEl.getAttribute('width')) || 800;
+    const svgHeight = parseFloat(svgEl.getAttribute('height')) || 600;
+    const margin = 48, headerH = 60;
+    const pageWidth = svgWidth + margin*2;
+    const pageHeight = svgHeight + margin*2 + headerH;
+    const orientation = pageWidth > pageHeight ? 'l' : 'p';
+
+    const doc = new jsPDF({ orientation, unit:'pt', format:[pageWidth, pageHeight] });
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(27,50,32);
+    doc.text('Rootline — Family Tree', margin, 34);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,110,90);
+    doc.text('Exported ' + new Date().toLocaleDateString() + ' · ' + DB.members.length + ' member' + (DB.members.length===1?'':'s'), margin, 50);
+
+    await doc.svg(svgEl, { x: margin, y: headerH, width: svgWidth, height: svgHeight });
+    doc.save('family-tree.pdf');
+  }catch(err){
+    alert('Could not export the PDF: ' + ((err && err.message) || err));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '⬇ Export to PDF'; }
+  }
+}
+
 /* ============================= GENEALOGY ============================= */
 function acceptedEdges(type){ return DB.relations.filter(r=>r.type===type && r.status==='accepted'); }
 function ancestorsOf(memberId){
@@ -518,7 +555,7 @@ function renderTree(){
       const arr=byLevel[l]; const totalW=arr.length*colW; const startX=(width-totalW)/2+colW/2;
       arr.forEach((m,i)=>{ pos[m.id]={x:startX+i*colW, y:padTop+l*rowH}; });
     });
-    let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+    let svg = `<svg id="tree-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
     parentEdges.forEach(e=>{
       const p=pos[e.aId], c=pos[e.bId]; if(!p||!c) return;
       const midY=(p.y+c.y)/2;
@@ -544,7 +581,10 @@ function renderTree(){
       </div>`;
   }
   return `<div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} recorded</div>
-    <h1>The family tree</h1><p class="hint">Confirmed relations only — proposed ones show up under Requests until accepted.</p>
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+      <div><h1>The family tree</h1><p class="hint">Confirmed relations only — proposed ones show up under Requests until accepted.</p></div>
+      ${DB.members.length ? `<button class="btn btn-outline btn-sm" data-action="export-tree-pdf" id="export-pdf-btn">⬇ Export to PDF</button>` : ''}
+    </div>
     ${branchRule()}${body}`;
 }
 
@@ -886,6 +926,7 @@ document.addEventListener('click', async (e)=>{
     }
     if(act==='toggle-new-convo'){ newConvoOpen = !newConvoOpen; render(); return; }
     if(act==='open-convo'){ activeConversationId = action.getAttribute('data-id'); newConvoOpen=false; render(); return; }
+    if(act==='export-tree-pdf'){ await exportTreeToPdf(); return; }
   }
 });
 document.addEventListener('change', (e)=>{
