@@ -165,7 +165,12 @@ try{
 
 /* ============================= HELPERS ============================= */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-function usernameToEmail(u){ return u.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@rootline.local'; }
+function usernameToEmail(u){
+  let local = u.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'');
+  local = local.replace(/^\.+|\.+$/g,'').slice(0,50); // no leading/trailing dots, keep it short
+  if(!local) local = 'member' + Math.floor(Math.random()*100000);
+  return local + '@rootline-ledger.com';
+}
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function mapMember(r){ return { id:r.id, first:r.first, last:r.last, gender:r.gender||'', birthYear:r.birth_year, deathYear:r.death_year, bio:r.bio||'', addedBy:r.added_by }; }
@@ -329,7 +334,7 @@ function renderAuth(){
         <button class="btn btn-primary" style="width:100%;" type="submit">Log in</button>
       </form>` : `
       <form data-form="register">
-        <div class="field"><label>Choose a username</label><input name="username" required/></div>
+        <div class="field"><label>Choose a username</label><input name="username" required placeholder="e.g. raviteja"/><div class="hint">A simple name, not your email address — letters, numbers, dots, dashes.</div></div>
         <div class="field"><label>Choose a password</label><input name="password" type="password" required minlength="6"/></div>
         <div class="radio-group">
           <label class="radio-opt"><input type="radio" name="regmode" value="new" ${regMode==='new'?'checked':''} data-regmode/> Create my profile</label>
