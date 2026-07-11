@@ -80,6 +80,10 @@ main{flex:1; padding:38px 44px; min-width:0;}
 .col{flex:1; min-width:240px;}
 .auth-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:30px;}
 .auth-card{max-width:440px; width:100%; background:var(--paper-card); border-radius:8px; padding:38px 38px 32px; box-shadow:0 30px 60px -30px rgba(27,50,32,0.45); border:1px solid rgba(0,0,0,0.05); position:relative; overflow:hidden;}
+.btn-google{background:#fff; color:#3c4043; border-color:var(--line); justify-content:center; font-weight:600;}
+.btn-google:hover{background:#f7f7f5; box-shadow:0 1px 3px rgba(0,0,0,0.12);}
+.or-divider{display:flex; align-items:center; gap:10px; margin:18px 0; color:#8c8471; font-size:0.78rem; text-transform:uppercase; letter-spacing:.06em;}
+.or-divider::before,.or-divider::after{content:''; flex:1; height:1px; background:var(--line);}
 .auth-tabs{display:flex; gap:6px; margin-bottom:22px; background:var(--paper); border-radius:8px; padding:4px;}
 .auth-tab{flex:1; text-align:center; padding:9px; border-radius:6px; border:none; background:transparent; font-weight:600; color:#77705f;}
 .auth-tab.active{background:var(--pine); color:#F6F1E4;}
@@ -182,11 +186,12 @@ function upsertLocal(arr, item){ const i = arr.findIndex(x=>x.id===item.id); if(
 /* ============================= APP STATE ============================= */
 let DB = { users:[], members:[], relations:[], chat:[] };
 let loaded = false;
-let session = { user:null };
+let session = { user:null, authUser:null };
 let view = 'tree';
 let authTab = 'login';
 let authError = '';
 let regMode = 'new';
+let googleRegMode = 'new';
 let searchQuery = '';
 let ancestorFor = '';
 let addRelationDefaults = null;
@@ -306,7 +311,14 @@ function emptyState(icon,title,body){
 }
 
 /* ============================= AUTH VIEW ============================= */
+function googleBtnHTML(){
+  return `<button type="button" class="btn btn-google" data-action="google-login" style="width:100%;">
+    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+    Continue with Google
+  </button>`;
+}
 function renderAuth(){
+  if(authTab==='complete-profile') { renderCompleteProfile(); return; }
   const unclaimed = DB.members.filter(m => !getUserByMember(m.id));
   const configWarning = !CONFIGURED ? `<div class="err-msg">This copy isn't connected to a Supabase project yet — open the file and fill in SUPABASE_URL / SUPABASE_ANON_KEY at the top of the &lt;script&gt;. See SETUP.md.</div>` : '';
   const html = `
@@ -322,11 +334,13 @@ function renderAuth(){
     </div>
     <p class="hint" style="margin-bottom:20px;">A shared ledger where your family records its branches, chats, and asks each other to confirm how you're related.</p>
     ${configWarning}
+    ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
+    ${googleBtnHTML()}
+    <div class="or-divider"><span>or</span></div>
     <div class="auth-tabs">
       <button class="auth-tab ${authTab==='login'?'active':''}" data-authtab="login">Log in</button>
       <button class="auth-tab ${authTab==='register'?'active':''}" data-authtab="register">Join the family</button>
     </div>
-    ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
     ${authTab==='login' ? `
       <form data-form="login">
         <div class="field"><label>Username</label><input name="username" required autocomplete="username"/></div>
@@ -355,6 +369,43 @@ function renderAuth(){
         <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create account</button>
       </form>`}
     <p class="hint" style="margin-top:16px;">Your username becomes a private login address behind the scenes — you never need to see or share it as an email.</p>
+  </div></div>`;
+  document.getElementById('root').innerHTML = html;
+}
+
+/* ---- shown once, right after a brand-new Google sign-in ---- */
+function renderCompleteProfile(){
+  const gUser = session.authUser;
+  const gName = (gUser && gUser.user_metadata && (gUser.user_metadata.full_name || gUser.user_metadata.name)) || '';
+  const [gFirst='', gLast=''] = gName.split(' ');
+  const suggestedUsername = (gUser && gUser.email ? gUser.email.split('@')[0] : 'member').replace(/[^a-zA-Z0-9._-]/g,'');
+  const unclaimed = DB.members.filter(m => !getUserByMember(m.id));
+  const html = `
+  <div class="auth-wrap"><div class="auth-card">
+    <h1 style="font-size:1.4rem;">Almost there</h1>
+    <p class="hint" style="margin-bottom:18px;">You're signed in with Google as <b>${esc(gUser && gUser.email || '')}</b>. Let's connect that to your place in the family tree.</p>
+    ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
+    <form data-form="complete-profile">
+      <div class="field"><label>Choose a username</label><input name="username" required value="${esc(suggestedUsername)}"/><div class="hint">Shown to the family instead of your email.</div></div>
+      <div class="radio-group">
+        <label class="radio-opt"><input type="radio" name="regmode" value="new" ${googleRegMode==='new'?'checked':''} data-googleregmode/> Create my profile</label>
+        <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${googleRegMode==='claim'?'checked':''} data-googleregmode ${unclaimed.length===0?'disabled':''}/> Claim an existing profile</label>
+      </div>
+      ${googleRegMode==='new' ? `
+        <div class="row">
+          <div class="col field"><label>First name</label><input name="first" required value="${esc(gFirst)}"/></div>
+          <div class="col field"><label>Last name</label><input name="last" required value="${esc(gLast)}"/></div>
+        </div>
+        <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
+      ` : `
+        <div class="field"><label>Which profile is you?</label>
+          <select name="claimId" required>
+            ${unclaimed.length ? unclaimed.map(m=>`<option value="${m.id}">${esc(fullName(m))} ${m.birthYear?('('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles yet</option>'}
+          </select>
+        </div>`}
+      <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Finish setting up</button>
+    </form>
+    <button class="btn btn-outline btn-sm" data-action="cancel-google" style="width:100%; margin-top:12px;">Use a different account</button>
   </div></div>`;
   document.getElementById('root').innerHTML = html;
 }
@@ -657,7 +708,13 @@ document.addEventListener('click', async (e)=>{
   const action = e.target.closest('[data-action]');
   if(action){
     const act = action.getAttribute('data-action');
-    if(act==='logout'){ await sb.auth.signOut(); session.user=null; view='tree'; render(); return; }
+    if(act==='logout'){ await sb.auth.signOut(); session.user=null; session.authUser=null; view='tree'; authTab='login'; render(); return; }
+    if(act==='google-login'){
+      const {error} = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.href.split('#')[0].split('?')[0] } });
+      if(error){ authError = error.message; render(); }
+      return; // browser is being redirected to Google
+    }
+    if(act==='cancel-google'){ await sb.auth.signOut(); session.authUser=null; authTab='login'; render(); return; }
     if(act==='accept-rel' || act==='decline-rel'){
       const id = action.getAttribute('data-id');
       const newStatus = act==='accept-rel' ? 'accepted' : 'declined';
@@ -683,6 +740,7 @@ document.addEventListener('click', async (e)=>{
 });
 document.addEventListener('change', (e)=>{
   if(e.target.matches('[data-regmode]')){ regMode = e.target.value; render(); return; }
+  if(e.target.matches('[data-googleregmode]')){ googleRegMode = e.target.value; render(); return; }
   if(e.target.matches('[data-change="ancestor-select"]')){ ancestorFor = e.target.value; render(); return; }
 });
 document.addEventListener('input', (e)=>{
@@ -735,6 +793,30 @@ document.addEventListener('submit', async (e)=>{
       session.user = mapProfile(p); authError=''; view='tree'; regMode='new'; setupRealtime(); render(); return;
     }
 
+    if(type==='complete-profile'){
+      const uname = String(data.username).trim();
+      if(!uname){ authError='Please choose a username.'; render(); return; }
+      const authUserId = session.authUser.id;
+
+      let memberId;
+      if(googleRegMode==='claim'){
+        if(!data.claimId){ authError='Choose a profile to claim.'; render(); return; }
+        memberId = data.claimId;
+      } else {
+        if(!data.first || !data.last){ authError='Please provide a first and last name.'; render(); return; }
+        const {data:m, error:merr} = await sb.from('members').insert({
+          first:data.first.trim(), last:data.last.trim(), birth_year:data.birthYear?Number(data.birthYear):null, added_by:authUserId
+        }).select().single();
+        if(merr){ authError = merr.message; render(); return; }
+        upsertLocal(DB.members, mapMember(m));
+        memberId = m.id;
+      }
+      const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
+      if(perr){ authError = perr.message; render(); return; }
+      upsertLocal(DB.users, mapProfile(p));
+      session.user = mapProfile(p); session.authUser=null; authError=''; view='tree'; googleRegMode='new'; setupRealtime(); render(); return;
+    }
+
     if(type==='add-member'){
       const {data:m, error} = await sb.from('members').insert({
         first:data.first.trim(), last:data.last.trim(), gender:data.gender||'',
@@ -768,6 +850,18 @@ document.addEventListener('submit', async (e)=>{
 });
 
 /* ============================= INIT ============================= */
+async function handleAuthUser(sbUser){
+  if(!sbUser){ session.user=null; session.authUser=null; return; }
+  await loadAll(); // re-fetch under an authenticated role so RLS returns full data
+  const profile = DB.users.find(u=>u.id===sbUser.id);
+  if(profile){
+    session.user = profile; session.authUser = null; authTab='login';
+    setupRealtime();
+  } else {
+    session.user = null; session.authUser = sbUser; authTab = 'complete-profile'; authError='';
+  }
+}
+
 (async function init(){
   try{
     if(!sb){ return; } // client failed to init; showFatalError already displayed
@@ -776,14 +870,24 @@ document.addEventListener('submit', async (e)=>{
       render();
       return;
     }
+    sb.auth.onAuthStateChange((event, sbSession)=>{
+      if(!loaded) return; // initial state handled by the explicit getSession() call below
+      if(event==='SIGNED_OUT'){ session.user=null; session.authUser=null; render(); return; }
+      const provider = sbSession && sbSession.user && sbSession.user.app_metadata && sbSession.user.app_metadata.provider;
+      if(event==='SIGNED_IN' && provider && provider!=='email'){
+        // only react here for OAuth providers (Google, etc) — email/password flows manage their own state directly
+        handleAuthUser(sbSession.user).then(render);
+      }
+    });
+
     const {data:{session:sbSession}, error:sessErr} = await sb.auth.getSession();
     if(sessErr) throw sessErr;
-    await loadAll();
-    loaded = true;
     if(sbSession){
-      const profile = DB.users.find(u=>u.id===sbSession.user.id);
-      if(profile){ session.user = profile; setupRealtime(); }
+      await handleAuthUser(sbSession.user);
+    } else {
+      await loadAll();
     }
+    loaded = true;
     render();
   }catch(err){
     showFatalError("Couldn't reach Supabase", (err && err.message) || err || 'Unknown error. Double-check SUPABASE_URL / SUPABASE_ANON_KEY and that schema.sql ran successfully.');
