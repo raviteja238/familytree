@@ -140,8 +140,28 @@ main{flex:1; padding:38px 44px; min-width:0;}
 const SUPABASE_URL = "https://jxtphlgrojwhfeijmeeo.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_QyOuuoCfCXL1Iv_HCipflQ_EiZiWX36";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
+/* ---- diagnostics: show a real error on screen instead of a blank page ---- */
+function showFatalError(title, detail){
+  const root = document.getElementById('root');
+  if(root) root.innerHTML = `<div style="max-width:640px;margin:60px auto;padding:28px 32px;font-family:sans-serif;background:#FBF7EC;border:1px solid #A05A3E;border-radius:8px;">
+    <h2 style="color:#A05A3E;margin-top:0;">${title}</h2>
+    <pre style="white-space:pre-wrap;background:#fff;padding:12px;border-radius:6px;border:1px solid #CDBD98;font-size:0.85rem;">${String(detail).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</pre>
+    <p style="font-size:0.9rem;color:#444;">Open the browser console (F12 → Console) for more detail. Common fixes: double-check SUPABASE_URL / SUPABASE_ANON_KEY have no typos or extra spaces, confirm schema.sql ran successfully, and try opening this page over https (e.g. via Netlify) instead of double-clicking the file.</p>
+  </div>`;
+}
+window.addEventListener('error', (e)=>{ showFatalError('Something went wrong', e.message || e.error || 'Unknown error'); });
+window.addEventListener('unhandledrejection', (e)=>{ showFatalError('Something went wrong (async)', (e.reason && e.reason.message) || e.reason || 'Unknown error'); });
+
+let sb, CONFIGURED = false;
+try{
+  if(typeof window.supabase === 'undefined'){
+    throw new Error("The Supabase library didn't load from the CDN (cdn.jsdelivr.net). Check your internet connection, firewall, or ad-blocker, and reload the page.");
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  CONFIGURED = !SUPABASE_URL.includes('YOUR-PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR-ANON');
+}catch(err){
+  showFatalError("Couldn't set up the Supabase connection", err.message || err);
+}
 
 /* ============================= HELPERS ============================= */
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
@@ -196,7 +216,7 @@ async function createRelation(yourMemberId, otherMemberId, humanType){
   if(relationExists(aId,bId,type)) return {ok:false, msg:'That relation has already been recorded.'};
   const approverUserId = computeApprover(otherMemberId, session.user.id);
   const status = approverUserId ? 'pending' : 'accepted';
-  const {data, error} = await supabase.from('relations').insert({
+  const {data, error} = await sb.from('relations').insert({
     a_id:aId, b_id:bId, type, status, requested_by:session.user.id, approver_user_id:approverUserId
   }).select().single();
   if(error) return {ok:false, msg:error.message};
@@ -585,10 +605,10 @@ function render(){
 /* ============================= DATA LOADING & REALTIME ============================= */
 async function loadAll(){
   const [mRes, rRes, cRes, pRes] = await Promise.all([
-    supabase.from('members').select('*'),
-    supabase.from('relations').select('*'),
-    supabase.from('chat_messages').select('*').order('created_at',{ascending:true}),
-    supabase.from('profiles').select('*'),
+    sb.from('members').select('*'),
+    sb.from('relations').select('*'),
+    sb.from('chat_messages').select('*').order('created_at',{ascending:true}),
+    sb.from('profiles').select('*'),
   ]);
   DB.members = (mRes.data||[]).map(mapMember);
   DB.relations = (rRes.data||[]).map(mapRelation);
@@ -597,7 +617,7 @@ async function loadAll(){
 }
 function setupRealtime(){
   if(realtimeChannel) return;
-  realtimeChannel = supabase.channel('rootline-live')
+  realtimeChannel = sb.channel('rootline-live')
     .on('postgres_changes', {event:'*', schema:'public', table:'members'}, payload=>{
       if(payload.eventType==='DELETE'){ DB.members = DB.members.filter(m=>m.id!==payload.old.id); }
       else { upsertLocal(DB.members, mapMember(payload.new)); }
@@ -632,11 +652,11 @@ document.addEventListener('click', async (e)=>{
   const action = e.target.closest('[data-action]');
   if(action){
     const act = action.getAttribute('data-action');
-    if(act==='logout'){ await supabase.auth.signOut(); session.user=null; view='tree'; render(); return; }
+    if(act==='logout'){ await sb.auth.signOut(); session.user=null; view='tree'; render(); return; }
     if(act==='accept-rel' || act==='decline-rel'){
       const id = action.getAttribute('data-id');
       const newStatus = act==='accept-rel' ? 'accepted' : 'declined';
-      const {error} = await supabase.from('relations').update({status:newStatus}).eq('id', id);
+      const {error} = await sb.from('relations').update({status:newStatus}).eq('id', id);
       if(!error){ const r = DB.relations.find(x=>x.id===id); if(r) r.status = newStatus; render(); }
       else alert(error.message);
       return;
@@ -675,7 +695,7 @@ document.addEventListener('submit', async (e)=>{
 
   try{
     if(type==='login'){
-      const {data:signInData, error} = await supabase.auth.signInWithPassword({ email: usernameToEmail(data.username), password: data.password });
+      const {data:signInData, error} = await sb.auth.signInWithPassword({ email: usernameToEmail(data.username), password: data.password });
       if(error){ authError = 'Username or password not recognised.'; render(); return; }
       await loadAll();
       const profile = DB.users.find(u=>u.id===signInData.user.id);
@@ -686,7 +706,7 @@ document.addEventListener('submit', async (e)=>{
     if(type==='register'){
       const uname = String(data.username).trim();
       if(!uname || !data.password){ authError='Please fill in all fields.'; render(); return; }
-      const {data:signUpData, error:signUpErr} = await supabase.auth.signUp({ email: usernameToEmail(uname), password: data.password });
+      const {data:signUpData, error:signUpErr} = await sb.auth.signUp({ email: usernameToEmail(uname), password: data.password });
       if(signUpErr){ authError = signUpErr.message; render(); return; }
       if(!signUpData.user){ authError = 'Check your email to confirm the account, then log in.'; render(); return; }
       const authUserId = signUpData.user.id;
@@ -697,21 +717,21 @@ document.addEventListener('submit', async (e)=>{
         memberId = data.claimId;
       } else {
         if(!data.first || !data.last){ authError='Please provide a first and last name.'; render(); return; }
-        const {data:m, error:merr} = await supabase.from('members').insert({
+        const {data:m, error:merr} = await sb.from('members').insert({
           first:data.first.trim(), last:data.last.trim(), birth_year:data.birthYear?Number(data.birthYear):null, added_by:authUserId
         }).select().single();
         if(merr){ authError = merr.message; render(); return; }
         upsertLocal(DB.members, mapMember(m));
         memberId = m.id;
       }
-      const {data:p, error:perr} = await supabase.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
+      const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
       if(perr){ authError = perr.message; render(); return; }
       upsertLocal(DB.users, mapProfile(p));
       session.user = mapProfile(p); authError=''; view='tree'; regMode='new'; setupRealtime(); render(); return;
     }
 
     if(type==='add-member'){
-      const {data:m, error} = await supabase.from('members').insert({
+      const {data:m, error} = await sb.from('members').insert({
         first:data.first.trim(), last:data.last.trim(), gender:data.gender||'',
         birth_year:data.birthYear?Number(data.birthYear):null, death_year:data.deathYear?Number(data.deathYear):null,
         bio:data.bio||'', added_by:session.user.id
@@ -732,7 +752,7 @@ document.addEventListener('submit', async (e)=>{
 
     if(type==='chat'){
       const text = data.text.trim(); if(!text) return;
-      const {data:msg, error} = await supabase.from('chat_messages').insert({ user_id:session.user.id, username:session.user.username, text }).select().single();
+      const {data:msg, error} = await sb.from('chat_messages').insert({ user_id:session.user.id, username:session.user.username, text }).select().single();
       if(error){ alert(error.message); return; }
       upsertLocal(DB.chat, mapChat(msg));
       form.reset(); render(); return;
@@ -744,19 +764,25 @@ document.addEventListener('submit', async (e)=>{
 
 /* ============================= INIT ============================= */
 (async function init(){
-  if(!CONFIGURED){
+  try{
+    if(!sb){ return; } // client failed to init; showFatalError already displayed
+    if(!CONFIGURED){
+      loaded = true;
+      render();
+      return;
+    }
+    const {data:{session:sbSession}, error:sessErr} = await sb.auth.getSession();
+    if(sessErr) throw sessErr;
+    await loadAll();
     loaded = true;
+    if(sbSession){
+      const profile = DB.users.find(u=>u.id===sbSession.user.id);
+      if(profile){ session.user = profile; setupRealtime(); }
+    }
     render();
-    return;
+  }catch(err){
+    showFatalError("Couldn't reach Supabase", (err && err.message) || err || 'Unknown error. Double-check SUPABASE_URL / SUPABASE_ANON_KEY and that schema.sql ran successfully.');
   }
-  const {data:{session:sbSession}} = await supabase.auth.getSession();
-  await loadAll();
-  loaded = true;
-  if(sbSession){
-    const profile = DB.users.find(u=>u.id===sbSession.user.id);
-    if(profile){ session.user = profile; setupRealtime(); }
-  }
-  render();
 })();
 </script>
 </body>
