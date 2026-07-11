@@ -102,6 +102,18 @@ main{flex:1; padding:38px 44px; min-width:0;}
 .empty-state{text-align:center; padding:50px 20px; color:#6b6355;}
 .empty-state svg{width:56px; height:56px; margin-bottom:12px; opacity:.55;}
 .chat-window{height:440px; overflow-y:auto; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:18px; display:flex; flex-direction:column; gap:12px; margin-bottom:16px;}
+.chat-layout{display:flex; gap:16px; align-items:flex-start;}
+.chat-list{width:230px; flex-shrink:0; display:flex; flex-direction:column; gap:4px;}
+.convo-item{display:flex; align-items:center; gap:8px; text-align:left; background:#fff; border:1px solid var(--line); border-radius:8px; padding:9px 12px; font-size:0.86rem; font-weight:600; color:var(--ink);}
+.convo-item:hover{border-color:var(--brass);}
+.convo-item.active{background:var(--pine); color:#F6F1E4; border-color:var(--pine);}
+.convo-ic{font-size:1rem;}
+.chat-main{flex:1; min-width:0;}
+.new-convo-box{background:#fff; border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px;}
+.member-checklist{max-height:160px; overflow-y:auto; border:1px solid var(--line); border-radius:6px; padding:8px; background:var(--paper);}
+.check-opt{display:flex; align-items:center; gap:7px; font-size:0.85rem; padding:4px 2px;}
+.check-opt input{width:auto;}
+@media (max-width:700px){ .chat-layout{flex-direction:column;} .chat-list{width:100%;} }
 .msg{max-width:72%; padding:9px 13px; border-radius:12px; font-size:0.9rem; line-height:1.4; position:relative;}
 .msg .who{font-family:var(--font-mono); font-size:0.68rem; color:var(--brass); margin-bottom:2px; display:block; font-weight:700;}
 .msg .ts{font-size:0.64rem; color:#948b78; margin-top:4px; display:block;}
@@ -179,12 +191,14 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&am
 
 function mapMember(r){ return { id:r.id, first:r.first, last:r.last, gender:r.gender||'', birthYear:r.birth_year, deathYear:r.death_year, bio:r.bio||'', addedBy:r.added_by }; }
 function mapRelation(r){ return { id:r.id, aId:r.a_id, bId:r.b_id, type:r.type, status:r.status, requestedBy:r.requested_by, approverUserId:r.approver_user_id, createdAt:new Date(r.created_at).getTime() }; }
-function mapChat(r){ return { id:r.id, userId:r.user_id, username:r.username, text:r.text, ts:new Date(r.created_at).getTime() }; }
+function mapChat(r){ return { id:r.id, conversationId:r.conversation_id, userId:r.user_id, username:r.username, text:r.text, ts:new Date(r.created_at).getTime() }; }
 function mapProfile(r){ return { id:r.id, username:r.username, memberId:r.member_id }; }
+function mapConversation(r){ return { id:r.id, type:r.type, name:r.name, isDefault:r.is_default, createdBy:r.created_by, createdAt:new Date(r.created_at).getTime() }; }
+function mapConvMember(r){ return { conversationId:r.conversation_id, userId:r.user_id }; }
 function upsertLocal(arr, item){ const i = arr.findIndex(x=>x.id===item.id); if(i>-1) arr[i]=item; else arr.push(item); }
 
 /* ============================= APP STATE ============================= */
-let DB = { users:[], members:[], relations:[], chat:[] };
+let DB = { users:[], members:[], relations:[], chat:[], conversations:[], conversationMembers:[] };
 let loaded = false;
 let session = { user:null, authUser:null };
 let view = 'tree';
@@ -197,6 +211,10 @@ let ancestorFor = '';
 let addRelationDefaults = null;
 let dismissedSuggestions = [];
 let realtimeChannel = null;
+let activeConversationId = null;
+let newConvoOpen = false;
+let newConvoType = 'direct';
+
 
 const AVATAR_COLORS = ['#2E5136','#B07F2C','#A05A3E','#7C9C87','#3F6B4A','#8C6A2E','#5B7A63','#9C6B4E'];
 function colorFor(id){ let h=0; for(const c of String(id)) h=(h*31+c.charCodeAt(0))%997; return AVATAR_COLORS[h%AVATAR_COLORS.length]; }
@@ -238,6 +256,63 @@ function ownedMemberOptions(){
   if(session.user.memberId) ids.add(session.user.memberId);
   DB.members.forEach(m => { if(m.addedBy===session.user.id) ids.add(m.id); });
   return [...ids].map(id=>getMember(id)).filter(Boolean);
+}
+function canDeleteRelation(r){
+  if(!session.user) return false;
+  if(r.requestedBy===session.user.id || r.approverUserId===session.user.id) return true;
+  const mine = ownedMemberOptions().map(m=>m.id);
+  return mine.includes(r.aId) || mine.includes(r.bId);
+}
+function myRelations(){
+  const mine = ownedMemberOptions().map(m=>m.id);
+  return DB.relations.filter(r => r.status!=='declined' && (mine.includes(r.aId) || mine.includes(r.bId)));
+}
+async function deleteRelation(id){
+  const {error} = await sb.from('relations').delete().eq('id', id);
+  if(error) return {ok:false, msg:error.message};
+  DB.relations = DB.relations.filter(r=>r.id!==id);
+  return {ok:true};
+}
+
+/* ============================= CONVERSATIONS (chat) ============================= */
+function myConversations(){
+  const mine = DB.conversationMembers.filter(cm=>cm.userId===session.user.id).map(cm=>cm.conversationId);
+  return DB.conversations.filter(c=>mine.includes(c.id))
+    .sort((a,b)=>{
+      const lastA = Math.max(0, ...DB.chat.filter(m=>m.conversationId===a.id).map(m=>m.ts));
+      const lastB = Math.max(0, ...DB.chat.filter(m=>m.conversationId===b.id).map(m=>m.ts));
+      return lastB - lastA;
+    });
+}
+function conversationDisplayName(c){
+  if(c.type==='group') return c.name || 'Group chat';
+  const otherUserId = DB.conversationMembers.filter(cm=>cm.conversationId===c.id).map(cm=>cm.userId).find(uid=>uid!==session.user.id);
+  const otherProfile = DB.users.find(u=>u.id===otherUserId);
+  return otherProfile ? fullName(getMember(otherProfile.memberId)) : 'Direct message';
+}
+function findExistingDirect(otherUserId){
+  return DB.conversations.find(c=>{
+    if(c.type!=='direct') return false;
+    const members = DB.conversationMembers.filter(cm=>cm.conversationId===c.id).map(cm=>cm.userId);
+    return members.length===2 && members.includes(session.user.id) && members.includes(otherUserId);
+  });
+}
+async function createConversation(type, name, memberUserIds){
+  const {data:conv, error} = await sb.from('conversations').insert({ type, name: type==='group' ? name : null, created_by: session.user.id }).select().single();
+  if(error) return {ok:false, msg:error.message};
+  const participantIds = [...new Set([session.user.id, ...memberUserIds])];
+  const rows = participantIds.map(uid=>({ conversation_id:conv.id, user_id:uid }));
+  const {error:merr} = await sb.from('conversation_members').insert(rows);
+  if(merr) return {ok:false, msg:merr.message};
+  upsertLocal(DB.conversations, mapConversation(conv));
+  participantIds.forEach(uid=>{ if(!DB.conversationMembers.some(cm=>cm.conversationId===conv.id && cm.userId===uid)) DB.conversationMembers.push({conversationId:conv.id, userId:uid}); });
+  return {ok:true, id:conv.id};
+}
+async function joinDefaultConversation(userId){
+  const fam = DB.conversations.find(c=>c.isDefault);
+  if(!fam) return;
+  const {error} = await sb.from('conversation_members').insert({ conversation_id:fam.id, user_id:userId });
+  if(!error) DB.conversationMembers.push({conversationId:fam.id, userId});
 }
 
 /* ============================= GENEALOGY ============================= */
@@ -577,18 +652,61 @@ function renderSearch(){
 }
 
 /* ============================= CHAT ============================= */
+function renderNewConvoForm(){
+  const others = DB.users.filter(u=>u.id!==session.user.id);
+  return `<div class="new-convo-box">
+      <div class="radio-group">
+        <label class="radio-opt"><input type="radio" name="convotype" value="direct" ${newConvoType==='direct'?'checked':''} data-convotype/> Direct message</label>
+        <label class="radio-opt"><input type="radio" name="convotype" value="group" ${newConvoType==='group'?'checked':''} data-convotype/> Group</label>
+      </div>
+      <form data-form="new-convo">
+        ${newConvoType==='group' ? `<div class="field"><label>Group name</label><input name="groupName" required placeholder="e.g. Cousins Crew"/></div>` : ''}
+        <div class="field">
+          <label>${newConvoType==='group' ? 'Add members' : 'Message who?'}</label>
+          <div class="member-checklist">
+            ${others.length ? others.map(u=>`
+              <label class="check-opt">
+                <input type="${newConvoType==='group'?'checkbox':'radio'}" name="${newConvoType==='group'?'members':'directMember'}" value="${u.id}"/>
+                ${esc(fullName(getMember(u.memberId)))}
+              </label>`).join('') : `<p class="hint">No other family members have accounts to message yet.</p>`}
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit" ${others.length===0?'disabled':''}>${newConvoType==='group'?'Create group':'Start conversation'}</button>
+      </form>
+    </div>`;
+}
 function renderChat(){
-  const msgs = [...DB.chat].sort((a,b)=>a.ts-b.ts);
-  return `<div class="eyebrow">Everyone in the family can see this</div><h1>Family chat</h1>${branchRule()}
-    <div class="chat-window" id="chat-window">
-      ${msgs.length ? msgs.map(m=>`<div class="msg ${m.userId===session.user.id?'mine':'theirs'}">
-          <span class="who">${esc(m.username)}</span>${esc(m.text)}<span class="ts">${fmtTime(m.ts)}</span></div>`).join('')
-        : `<div class="hint" style="margin:auto;text-align:center;">No messages yet — say hello to the family 👋</div>`}
-    </div>
-    <form data-form="chat" class="chat-input-row">
-      <input name="text" placeholder="Write a message…" autocomplete="off" required/>
-      <button class="btn btn-primary" type="submit">Send</button>
-    </form>`;
+  const convos = myConversations();
+  if(!activeConversationId || !convos.some(c=>c.id===activeConversationId)){
+    activeConversationId = convos.length ? convos[0].id : null;
+  }
+  const activeConvo = convos.find(c=>c.id===activeConversationId);
+  const messages = activeConvo ? DB.chat.filter(m=>m.conversationId===activeConvo.id).sort((a,b)=>a.ts-b.ts) : [];
+  return `<div class="eyebrow">Direct messages &amp; group chats</div><h1>Family chat</h1>${branchRule()}
+    <div class="chat-layout">
+      <div class="chat-list">
+        <button class="btn btn-outline btn-sm" data-action="toggle-new-convo" style="width:100%;margin-bottom:10px;">${newConvoOpen ? '× Cancel' : '+ New conversation'}</button>
+        ${newConvoOpen ? renderNewConvoForm() : ''}
+        ${convos.length ? convos.map(c=>`
+          <button class="convo-item ${c.id===activeConversationId?'active':''}" data-action="open-convo" data-id="${c.id}">
+            <span class="convo-ic">${c.type==='group'?'👪':'💬'}</span>
+            <span>${esc(conversationDisplayName(c))}</span>
+          </button>`).join('') : (newConvoOpen ? '' : `<p class="hint">No conversations yet — start one above.</p>`)}
+      </div>
+      <div class="chat-main">
+        ${activeConvo ? `
+          <div class="chat-window" id="chat-window">
+            ${messages.length ? messages.map(m=>`<div class="msg ${m.userId===session.user.id?'mine':'theirs'}">
+                <span class="who">${esc(m.username)}</span>${esc(m.text)}<span class="ts">${fmtTime(m.ts)}</span></div>`).join('')
+              : `<div class="hint" style="margin:auto;text-align:center;">No messages yet — say hello 👋</div>`}
+          </div>
+          <form data-form="chat" class="chat-input-row">
+            <input name="text" placeholder="Write a message…" autocomplete="off" required/>
+            <button class="btn btn-primary" type="submit">Send</button>
+          </form>
+        ` : emptyState('💬','Pick or start a conversation','Choose a conversation on the left, or start a direct message or group chat with a family member.')}
+      </div>
+    </div>`;
 }
 
 /* ============================= REQUESTS ============================= */
@@ -602,13 +720,22 @@ function renderRequests(){
   const incoming = DB.relations.filter(r=>r.status==='pending' && r.approverUserId===session.user.id);
   const outgoing = DB.relations.filter(r=>r.status==='pending' && r.requestedBy===session.user.id && r.approverUserId!==session.user.id);
   const history = DB.relations.filter(r=>r.status!=='pending' && (r.requestedBy===session.user.id || r.approverUserId===session.user.id)).slice(-8).reverse();
+  const mine = myRelations();
   return `<div class="eyebrow">Confirmations keep the tree accurate</div><h1>Requests</h1>${branchRule()}
     <h3>Waiting on you (${incoming.length})</h3>
     ${incoming.length ? incoming.map(r=>`<div class="req-card"><div>${relLabel(r)} <span class="pill pending">pending</span></div>
       <div class="req-actions"><button class="btn btn-primary btn-sm" data-action="accept-rel" data-id="${r.id}">Accept</button>
       <button class="btn btn-danger btn-sm" data-action="decline-rel" data-id="${r.id}">Decline</button></div></div>`).join('') : `<p class="hint">Nothing needs your confirmation right now.</p>`}
     <h3 style="margin-top:26px;">Waiting on others (${outgoing.length})</h3>
-    ${outgoing.length ? outgoing.map(r=>`<div class="req-card"><div>${relLabel(r)} <span class="pill pending">pending</span></div></div>`).join('') : `<p class="hint">You have no proposals awaiting a reply.</p>`}
+    ${outgoing.length ? outgoing.map(r=>`<div class="req-card"><div>${relLabel(r)} <span class="pill pending">pending</span></div>
+      <div class="req-actions"><button class="btn btn-danger btn-sm" data-action="delete-rel" data-id="${r.id}">Cancel</button></div></div>`).join('') : `<p class="hint">You have no proposals awaiting a reply.</p>`}
+
+    <h3 style="margin-top:26px;">Manage your relations (${mine.length})</h3>
+    <p class="hint">Remove a relation if it was recorded by mistake.</p>
+    ${mine.length ? mine.map(r=>`<div class="req-card"><div>${relLabel(r)} <span class="pill ${r.status}">${r.status}</span></div>
+      ${canDeleteRelation(r) ? `<div class="req-actions"><button class="btn btn-danger btn-sm" data-action="delete-rel" data-id="${r.id}">Delete</button></div>` : ''}
+      </div>`).join('') : `<p class="hint">No relations recorded for you yet.</p>`}
+
     <h3 style="margin-top:26px;">Recent history</h3>
     ${history.length ? history.map(r=>`<div class="req-card"><div>${relLabel(r)}</div><span class="pill ${r.status}">${r.status}</span></div>`).join('') : `<p class="hint">No resolved requests yet.</p>`}`;
 }
@@ -660,16 +787,20 @@ function render(){
 
 /* ============================= DATA LOADING & REALTIME ============================= */
 async function loadAll(){
-  const [mRes, rRes, cRes, pRes] = await Promise.all([
+  const [mRes, rRes, cRes, pRes, convRes, convMemRes] = await Promise.all([
     sb.from('members').select('*'),
     sb.from('relations').select('*'),
     sb.from('chat_messages').select('*').order('created_at',{ascending:true}),
     sb.from('profiles').select('*'),
+    sb.from('conversations').select('*'),
+    sb.from('conversation_members').select('*'),
   ]);
   DB.members = (mRes.data||[]).map(mapMember);
   DB.relations = (rRes.data||[]).map(mapRelation);
   DB.chat = (cRes.data||[]).map(mapChat);
   DB.users = (pRes.data||[]).map(mapProfile);
+  DB.conversations = (convRes.data||[]).map(mapConversation);
+  DB.conversationMembers = (convMemRes.data||[]).map(mapConvMember);
 }
 function setupRealtime(){
   if(realtimeChannel) return;
@@ -692,6 +823,16 @@ function setupRealtime(){
     .on('postgres_changes', {event:'*', schema:'public', table:'profiles'}, payload=>{
       if(payload.eventType==='DELETE'){ DB.users = DB.users.filter(u=>u.id!==payload.old.id); }
       else { upsertLocal(DB.users, mapProfile(payload.new)); }
+      render();
+    })
+    .on('postgres_changes', {event:'*', schema:'public', table:'conversations'}, payload=>{
+      if(payload.eventType==='DELETE'){ DB.conversations = DB.conversations.filter(c=>c.id!==payload.old.id); }
+      else { upsertLocal(DB.conversations, mapConversation(payload.new)); }
+      render();
+    })
+    .on('postgres_changes', {event:'*', schema:'public', table:'conversation_members'}, payload=>{
+      if(payload.eventType==='DELETE'){ DB.conversationMembers = DB.conversationMembers.filter(cm=>!(cm.conversationId===payload.old.conversation_id && cm.userId===payload.old.user_id)); }
+      else { const item=mapConvMember(payload.new); if(!DB.conversationMembers.some(cm=>cm.conversationId===item.conversationId && cm.userId===item.userId)) DB.conversationMembers.push(item); }
       render();
     })
     .subscribe();
@@ -736,12 +877,22 @@ document.addEventListener('click', async (e)=>{
       dismissedSuggestions.push({username:session.user.username, pairKey:key});
       render(); return;
     }
+    if(act==='delete-rel'){
+      const id = action.getAttribute('data-id');
+      if(!confirm('Remove this relation? This cannot be undone.')) return;
+      const res = await deleteRelation(id);
+      if(res.ok) render(); else alert(res.msg);
+      return;
+    }
+    if(act==='toggle-new-convo'){ newConvoOpen = !newConvoOpen; render(); return; }
+    if(act==='open-convo'){ activeConversationId = action.getAttribute('data-id'); newConvoOpen=false; render(); return; }
   }
 });
 document.addEventListener('change', (e)=>{
   if(e.target.matches('[data-regmode]')){ regMode = e.target.value; render(); return; }
   if(e.target.matches('[data-googleregmode]')){ googleRegMode = e.target.value; render(); return; }
   if(e.target.matches('[data-change="ancestor-select"]')){ ancestorFor = e.target.value; render(); return; }
+  if(e.target.matches('[data-convotype]')){ newConvoType = e.target.value; render(); return; }
 });
 document.addEventListener('input', (e)=>{
   if(e.target.matches('[data-change="search-input"]')){ searchQuery = e.target.value; const el=document.querySelector('main .container'); if(el) el.innerHTML = renderSearch(); }
@@ -790,6 +941,7 @@ document.addEventListener('submit', async (e)=>{
       const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
       if(perr){ authError = perr.message; render(); return; }
       upsertLocal(DB.users, mapProfile(p));
+      await joinDefaultConversation(authUserId);
       session.user = mapProfile(p); authError=''; view='tree'; regMode='new'; setupRealtime(); render(); return;
     }
 
@@ -814,6 +966,7 @@ document.addEventListener('submit', async (e)=>{
       const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
       if(perr){ authError = perr.message; render(); return; }
       upsertLocal(DB.users, mapProfile(p));
+      await joinDefaultConversation(authUserId);
       session.user = mapProfile(p); session.authUser=null; authError=''; view='tree'; googleRegMode='new'; setupRealtime(); render(); return;
     }
 
@@ -838,11 +991,30 @@ document.addEventListener('submit', async (e)=>{
     }
 
     if(type==='chat'){
-      const text = data.text.trim(); if(!text) return;
-      const {data:msg, error} = await sb.from('chat_messages').insert({ user_id:session.user.id, username:session.user.username, text }).select().single();
+      const text = data.text.trim(); if(!text || !activeConversationId) return;
+      const {data:msg, error} = await sb.from('chat_messages').insert({ conversation_id:activeConversationId, user_id:session.user.id, username:session.user.username, text }).select().single();
       if(error){ alert(error.message); return; }
       upsertLocal(DB.chat, mapChat(msg));
       form.reset(); render(); return;
+    }
+
+    if(type==='new-convo'){
+      if(newConvoType==='direct'){
+        const otherId = data.directMember;
+        if(!otherId){ alert('Choose someone to message.'); return; }
+        const existing = findExistingDirect(otherId);
+        if(existing){ activeConversationId = existing.id; newConvoOpen=false; render(); return; }
+        const res = await createConversation('direct', null, [otherId]);
+        if(!res.ok){ alert(res.msg); return; }
+        activeConversationId = res.id; newConvoOpen=false; render(); return;
+      } else {
+        const memberIds = new FormData(form).getAll('members');
+        if(!data.groupName || !data.groupName.trim()){ alert('Give the group a name.'); return; }
+        if(memberIds.length===0){ alert('Pick at least one person to add.'); return; }
+        const res = await createConversation('group', data.groupName.trim(), memberIds);
+        if(!res.ok){ alert(res.msg); return; }
+        activeConversationId = res.id; newConvoOpen=false; render(); return;
+      }
     }
   } finally {
     if(submitBtn) submitBtn.disabled = false;
