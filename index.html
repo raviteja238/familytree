@@ -95,7 +95,7 @@ main{flex:1; padding:38px 44px; min-width:0;}
 .err-msg{background:#F6E4DC; border:1px solid var(--rust); color:#7a3721; padding:9px 12px; border-radius:6px; font-size:0.85rem; margin-bottom:14px;}
 .ok-msg{background:#E4EDE1; border:1px solid var(--sage); color:#2c4a33; padding:9px 12px; border-radius:6px; font-size:0.85rem; margin-bottom:14px;}
 .member-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; margin-top:18px;}
-.member-card{background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px; display:flex; gap:12px; align-items:flex-start; transition:box-shadow .15s;}
+.member-card{background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px; display:flex; gap:12px; align-items:flex-start; transition:box-shadow .15s; width:100%; font-family:var(--font-body);}
 .member-card:hover{box-shadow:0 8px 20px -14px rgba(27,50,32,0.5);}
 .avatar{width:44px; height:44px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:var(--font-display); font-size:1rem;}
 .member-name{font-weight:700; font-size:0.98rem;}
@@ -130,6 +130,23 @@ main{flex:1; padding:38px 44px; min-width:0;}
 .pill.accepted{background:#DCEBDD; color:#2c5c33;}
 .pill.declined{background:#F0DAD3; color:#7a3721;}
 .tree-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:#fff; padding:10px;}
+.avatar-img{border-radius:50%; object-fit:cover; flex-shrink:0; border:2px solid #fff; box-shadow:0 0 0 1px var(--line);}
+.stats-strip{display:flex; gap:10px; flex-wrap:wrap; margin:16px 0 4px;}
+.stat{background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 16px; text-align:center; min-width:100px;}
+.stat b{display:block; font-family:var(--font-display); font-size:1.3rem; color:var(--pine-dark);}
+.stat span{font-size:0.7rem; color:#6b6355; text-transform:uppercase; letter-spacing:.03em;}
+.tree-toolbar{display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
+.zoom-pct{font-family:var(--font-mono); font-size:0.8rem; color:#6b6355; min-width:42px; text-align:center;}
+.modal-overlay{position:fixed; inset:0; background:rgba(27,50,32,0.55); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;}
+.modal-card{background:var(--paper-card); border-radius:10px; padding:30px 32px; max-width:520px; width:100%; max-height:88vh; overflow-y:auto; position:relative; box-shadow:0 30px 70px -20px rgba(0,0,0,0.4);}
+.modal-close{position:absolute; top:14px; right:16px; background:transparent; border:none; font-size:1.4rem; line-height:1; color:#6b6355; padding:4px 8px;}
+.modal-close:hover{color:var(--rust);}
+.modal-header{display:flex; gap:16px; align-items:center;}
+.modal-actions{display:flex; gap:8px; margin-top:20px; border-top:1px solid var(--line); padding-top:16px;}
+.rel-groups{margin-top:18px; display:flex; flex-direction:column; gap:10px;}
+.rel-group-label{font-size:0.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--brass); font-weight:700; margin-bottom:5px;}
+.rel-chip{background:#fff; border:1px solid var(--line); border-radius:20px; padding:5px 12px; font-size:0.82rem; margin:0 6px 6px 0; display:inline-block;}
+.rel-chip:hover{border-color:var(--pine);}
 .tree-legend{display:flex; gap:22px; margin-top:14px; font-size:0.8rem; color:#6b6355; flex-wrap:wrap;}
 .tree-legend span{display:inline-flex; align-items:center; gap:6px;}
 .legend-swatch{width:22px; height:2px; display:inline-block;}
@@ -191,7 +208,7 @@ function usernameToEmail(u){
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function mapMember(r){ return { id:r.id, first:r.first, last:r.last, gender:r.gender||'', birthYear:r.birth_year, deathYear:r.death_year, bio:r.bio||'', addedBy:r.added_by }; }
+function mapMember(r){ return { id:r.id, first:r.first, last:r.last, gender:r.gender||'', birthYear:r.birth_year, deathYear:r.death_year, bio:r.bio||'', addedBy:r.added_by, photoUrl:r.photo_url||null }; }
 function mapRelation(r){ return { id:r.id, aId:r.a_id, bId:r.b_id, type:r.type, status:r.status, requestedBy:r.requested_by, approverUserId:r.approver_user_id, createdAt:new Date(r.created_at).getTime() }; }
 function mapChat(r){ return { id:r.id, conversationId:r.conversation_id, userId:r.user_id, username:r.username, text:r.text, ts:new Date(r.created_at).getTime() }; }
 function mapProfile(r){ return { id:r.id, username:r.username, memberId:r.member_id }; }
@@ -216,6 +233,9 @@ let realtimeChannel = null;
 let activeConversationId = null;
 let newConvoOpen = false;
 let newConvoType = 'direct';
+let detailMemberId = null;
+let editingMemberId = null;
+let treeZoom = 1;
 
 
 const AVATAR_COLORS = ['#2E5136','#B07F2C','#A05A3E','#7C9C87','#3F6B4A','#8C6A2E','#5B7A63','#9C6B4E'];
@@ -258,6 +278,28 @@ function ownedMemberOptions(){
   if(session.user.memberId) ids.add(session.user.memberId);
   DB.members.forEach(m => { if(m.addedBy===session.user.id) ids.add(m.id); });
   return [...ids].map(id=>getMember(id)).filter(Boolean);
+}
+function avatarHTML(m, size){
+  if(m && m.photoUrl){
+    return `<img src="${esc(m.photoUrl)}" alt="${esc(fullName(m))}" class="avatar-img" style="width:${size}px;height:${size}px;"/>`;
+  }
+  return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.32)}px;background:${colorFor(m?m.id:'x')};">${esc(initials(m||{}))}</div>`;
+}
+function canEditMember(m){
+  if(!session.user || !m) return false;
+  return m.addedBy===session.user.id || m.id===session.user.memberId;
+}
+function canDeleteMember(m){
+  if(!session.user || !m) return false;
+  return m.addedBy===session.user.id && !getUserByMember(m.id);
+}
+async function uploadAvatar(memberId, file){
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+  const path = `${memberId}/${Date.now()}.${ext}`;
+  const {error} = await sb.storage.from('avatars').upload(path, file, {upsert:true});
+  if(error) return {ok:false, msg:error.message};
+  const {data} = sb.storage.from('avatars').getPublicUrl(path);
+  return {ok:true, url:data.publicUrl};
 }
 function canDeleteRelation(r){
   if(!session.user) return false;
@@ -367,6 +409,13 @@ function ancestorsOf(memberId){
     if(generations.length>10) break;
   }
   return generations;
+}
+function relatedLists(memberId){
+  const parents = acceptedEdges('parent-of').filter(e=>e.bId===memberId).map(e=>getMember(e.aId)).filter(Boolean);
+  const children = acceptedEdges('parent-of').filter(e=>e.aId===memberId).map(e=>getMember(e.bId)).filter(Boolean);
+  const spouses = acceptedEdges('spouse-of').filter(e=>e.aId===memberId||e.bId===memberId).map(e=>getMember(e.aId===memberId?e.bId:e.aId)).filter(Boolean);
+  const siblings = acceptedEdges('sibling-of').filter(e=>e.aId===memberId||e.bId===memberId).map(e=>getMember(e.aId===memberId?e.bId:e.aId)).filter(Boolean);
+  return {parents,children,spouses,siblings};
 }
 
 /* ============================= SHELL ============================= */
@@ -523,6 +572,73 @@ function renderCompleteProfile(){
 }
 
 /* ============================= TREE ============================= */
+/* ============================= MEMBER DETAIL MODAL ============================= */
+function renderMemberModal(){
+  const m = getMember(detailMemberId);
+  if(!m) return '';
+  if(editingMemberId===m.id) return renderEditMemberModal(m);
+  const rel = relatedLists(m.id);
+  const canEdit = canEditMember(m);
+  const canDelete = canDeleteMember(m);
+  const owner = getUserByMember(m.id);
+  const group = (label, arr) => arr.length ? `<div class="rel-group"><div class="rel-group-label">${label}</div>${arr.map(x=>`<button class="rel-chip" data-action="open-member" data-id="${x.id}">${esc(fullName(x))}</button>`).join('')}</div>` : '';
+  return `<div class="modal-overlay" data-action="close-modal">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <button class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
+      <div class="modal-header">
+        ${avatarHTML(m, 84)}
+        <div>
+          <h2 style="margin-bottom:2px;">${esc(fullName(m))}</h2>
+          <div class="hint">${esc(fmtYear(m))}${m.gender?(' · '+esc(m.gender)):''}</div>
+          ${!owner ? `<span class="member-tag" style="background:#F3E3C4;color:#7a5a12;">unclaimed profile</span>` : ''}
+        </div>
+      </div>
+      ${m.bio ? `<p style="margin-top:14px;">${esc(m.bio)}</p>` : ''}
+      <div class="rel-groups">
+        ${group('Parents', rel.parents)}
+        ${group('Spouse / Partner', rel.spouses)}
+        ${group('Children', rel.children)}
+        ${group('Siblings', rel.siblings)}
+        ${!rel.parents.length && !rel.spouses.length && !rel.children.length && !rel.siblings.length ? `<p class="hint">No confirmed relations recorded yet.</p>` : ''}
+      </div>
+      ${(canEdit||canDelete) ? `<div class="modal-actions">
+        ${canEdit ? `<button class="btn btn-outline btn-sm" data-action="edit-member" data-id="${m.id}">Edit profile</button>` : ''}
+        ${canDelete ? `<button class="btn btn-danger btn-sm" data-action="delete-member" data-id="${m.id}">Delete member</button>` : ''}
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+function renderEditMemberModal(m){
+  return `<div class="modal-overlay" data-action="close-modal">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <button class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
+      <div class="modal-header">${avatarHTML(m,56)}<h2 style="margin:0;">Edit ${esc(fullName(m))}</h2></div>
+      <form data-form="edit-member" data-id="${m.id}" style="margin-top:16px;">
+        <div class="row">
+          <div class="col field"><label>First name</label><input name="first" required value="${esc(m.first)}"/></div>
+          <div class="col field"><label>Last name</label><input name="last" required value="${esc(m.last)}"/></div>
+        </div>
+        <div class="row">
+          <div class="col field"><label>Gender</label><select name="gender">
+            <option value="" ${!m.gender?'selected':''}>Unspecified</option>
+            <option ${m.gender==='Female'?'selected':''}>Female</option>
+            <option ${m.gender==='Male'?'selected':''}>Male</option>
+            <option ${m.gender==='Other'?'selected':''}>Other</option>
+          </select></div>
+          <div class="col field"><label>Birth year</label><input name="birthYear" type="number" min="1600" max="2100" value="${m.birthYear||''}"/></div>
+          <div class="col field"><label>Death year</label><input name="deathYear" type="number" min="1600" max="2100" value="${m.deathYear||''}"/></div>
+        </div>
+        <div class="field"><label>Notes / bio</label><textarea name="bio" rows="3">${esc(m.bio||'')}</textarea></div>
+        <div class="field"><label>Photo</label><input type="file" name="photo" accept="image/*"/>${m.photoUrl?`<div class="hint">Uploading a new photo replaces the current one.</div>`:''}</div>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button class="btn btn-primary" type="submit">Save changes</button>
+          <button class="btn btn-outline btn-sm" type="button" data-action="cancel-edit-member">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+
 function renderTree(){
   const members = DB.members;
   let body;
@@ -568,23 +684,43 @@ function renderTree(){
     });
     members.forEach(m=>{
       const p=pos[m.id]; if(!p) return; const col=colorFor(m.id);
-      svg += `<g><circle cx="${p.x}" cy="${p.y}" r="24" fill="${col}"/>
-        <text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="#fff" font-family="Fraunces, serif" font-size="14" font-weight="700">${esc(initials(m))}</text>
+      const photo = m.photoUrl ? `<clipPath id="clip-${m.id}"><circle cx="${p.x}" cy="${p.y}" r="24"/></clipPath>
+        <image href="${esc(m.photoUrl)}" x="${p.x-24}" y="${p.y-24}" width="48" height="48" clip-path="url(#clip-${m.id})" preserveAspectRatio="xMidYMid slice"/>`
+        : `<circle cx="${p.x}" cy="${p.y}" r="24" fill="${col}"/>
+        <text x="${p.x}" y="${p.y+5}" text-anchor="middle" fill="#fff" font-family="Fraunces, serif" font-size="14" font-weight="700">${esc(initials(m))}</text>`;
+      svg += `<g data-action="open-member" data-id="${m.id}" style="cursor:pointer;">
+        ${photo}
+        <circle cx="${p.x}" cy="${p.y}" r="24" fill="none" stroke="#fff" stroke-width="2"/>
         <text x="${p.x}" y="${p.y+42}" text-anchor="middle" fill="#20291F" font-family="'Source Sans 3', sans-serif" font-size="12" font-weight="700">${esc(fullName(m))}</text>
         <text x="${p.x}" y="${p.y+56}" text-anchor="middle" fill="#6b6355" font-family="'IBM Plex Mono', monospace" font-size="10">${esc(fmtYear(m))}</text></g>`;
     });
     svg += `</svg>`;
-    body = `<div class="tree-scroll">${svg}</div>
+    body = `<div class="tree-toolbar">
+        <button class="btn btn-outline btn-sm" data-action="zoom-out" title="Zoom out">−</button>
+        <span class="zoom-pct">${Math.round(treeZoom*100)}%</span>
+        <button class="btn btn-outline btn-sm" data-action="zoom-in" title="Zoom in">+</button>
+        <button class="btn btn-outline btn-sm" data-action="zoom-reset" title="Reset zoom">Reset</button>
+        <span class="hint" style="margin-left:auto;">Click a photo or name to view their profile</span>
+      </div>
+      <div class="tree-scroll"><div style="transform:scale(${treeZoom}); transform-origin: top left; width:${width}px; height:${height}px;">${svg}</div></div>
       <div class="tree-legend">
         <span><span class="legend-swatch" style="background:#2E5136;"></span> Parent → child</span>
         <span><span class="legend-swatch" style="background-image:repeating-linear-gradient(to right, #7C9C87 0 4px, transparent 4px 7px);"></span> Spouse / partner</span>
       </div>`;
   }
+  const years = members.map(m=>m.birthYear).filter(Boolean);
+  const stats = members.length ? `<div class="stats-strip">
+      <div class="stat"><b>${members.length}</b><span>member${members.length===1?'':'s'}</span></div>
+      <div class="stat"><b>${DB.relations.filter(r=>r.status==='accepted').length}</b><span>confirmed relations</span></div>
+      ${years.length ? `<div class="stat"><b>${Math.min(...years)}</b><span>earliest birth year</span></div>` : ''}
+      ${years.length ? `<div class="stat"><b>${Math.max(...years)}</b><span>most recent birth year</span></div>` : ''}
+    </div>` : '';
   return `<div class="eyebrow">${DB.members.length} member${DB.members.length===1?'':'s'} recorded</div>
     <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
       <div><h1>The family tree</h1><p class="hint">Confirmed relations only — proposed ones show up under Requests until accepted.</p></div>
       ${DB.members.length ? `<button class="btn btn-outline btn-sm" data-action="export-tree-pdf" id="export-pdf-btn">⬇ Export to PDF</button>` : ''}
     </div>
+    ${stats}
     ${branchRule()}${body}`;
 }
 
@@ -605,6 +741,7 @@ function renderAddMember(){
           <div class="col field"><label>Death year (if applicable)</label><input name="deathYear" type="number" min="1600" max="2100"/></div>
         </div>
         <div class="field"><label>Notes / bio</label><textarea name="bio" rows="3" placeholder="Anything worth remembering about them..."></textarea></div>
+        <div class="field"><label>Photo (optional)</label><input type="file" name="photo" accept="image/*"/></div>
         <button class="btn btn-primary" type="submit">Add to the ledger</button>
       </form>
     </div><div class="col">
@@ -675,12 +812,12 @@ function memberCardHTML(m){
   if(!m) return '';
   const relCount = DB.relations.filter(r=>r.status==='accepted' && (r.aId===m.id||r.bId===m.id)).length;
   const owner = getUserByMember(m.id);
-  return `<div class="member-card"><div class="avatar" style="background:${colorFor(m.id)};">${esc(initials(m))}</div>
+  return `<button class="member-card" data-action="open-member" data-id="${m.id}" style="text-align:left; cursor:pointer;">${avatarHTML(m,44)}
     <div><div class="member-name">${esc(fullName(m))}</div>
     <div class="member-meta">${esc(fmtYear(m)) || '&nbsp;'}</div><div class="member-meta">${m.gender||''}</div>
     <span class="member-tag">${relCount} relation${relCount===1?'':'s'}</span>
     ${!owner ? `<span class="member-tag" style="background:#F3E3C4;color:#7a5a12;">unclaimed</span>` : ''}
-    </div></div>`;
+    </div></button>`;
 }
 function renderSearch(){
   const q = searchQuery.trim().toLowerCase();
@@ -821,7 +958,7 @@ function render(){
   else if(view==='chat') inner=renderChat();
   else if(view==='requests') inner=renderRequests();
   else if(view==='suggestions') inner=renderSuggestions();
-  document.getElementById('root').innerHTML = shellHTML(inner);
+  document.getElementById('root').innerHTML = shellHTML(inner) + (detailMemberId ? renderMemberModal() : '');
   if(view==='chat'){ const w=document.getElementById('chat-window'); if(w) w.scrollTop=w.scrollHeight; }
 }
 
@@ -927,6 +1064,22 @@ document.addEventListener('click', async (e)=>{
     if(act==='toggle-new-convo'){ newConvoOpen = !newConvoOpen; render(); return; }
     if(act==='open-convo'){ activeConversationId = action.getAttribute('data-id'); newConvoOpen=false; render(); return; }
     if(act==='export-tree-pdf'){ await exportTreeToPdf(); return; }
+    if(act==='open-member'){ detailMemberId = action.getAttribute('data-id'); editingMemberId=null; render(); return; }
+    if(act==='close-modal'){ detailMemberId=null; editingMemberId=null; render(); return; }
+    if(act==='edit-member'){ editingMemberId = action.getAttribute('data-id'); render(); return; }
+    if(act==='cancel-edit-member'){ editingMemberId=null; render(); return; }
+    if(act==='delete-member'){
+      const id = action.getAttribute('data-id');
+      if(!confirm('Delete this family member? Their relations will be removed too. This cannot be undone.')) return;
+      const {error} = await sb.from('members').delete().eq('id', id);
+      if(error){ alert(error.message); return; }
+      DB.members = DB.members.filter(m=>m.id!==id);
+      DB.relations = DB.relations.filter(r=>r.aId!==id && r.bId!==id);
+      detailMemberId=null; editingMemberId=null; render(); return;
+    }
+    if(act==='zoom-in'){ treeZoom = Math.min(2, +(treeZoom+0.15).toFixed(2)); render(); return; }
+    if(act==='zoom-out'){ treeZoom = Math.max(0.4, +(treeZoom-0.15).toFixed(2)); render(); return; }
+    if(act==='zoom-reset'){ treeZoom = 1; render(); return; }
   }
 });
 document.addEventListener('change', (e)=>{
@@ -1018,9 +1171,37 @@ document.addEventListener('submit', async (e)=>{
         bio:data.bio||'', added_by:session.user.id
       }).select().single();
       if(error){ alert(error.message); return; }
-      upsertLocal(DB.members, mapMember(m));
+      let finalMember = m;
+      if(data.photo && data.photo.size > 0){
+        const up = await uploadAvatar(m.id, data.photo);
+        if(up.ok){
+          const {data:m2, error:uerr} = await sb.from('members').update({ photo_url: up.url }).eq('id', m.id).select().single();
+          if(!uerr) finalMember = m2;
+        } else {
+          alert('Member added, but the photo upload failed: ' + up.msg);
+        }
+      }
+      upsertLocal(DB.members, mapMember(finalMember));
       addRelationDefaults = {your:session.user.memberId, other:m.id, type:'sibling'};
       view='add-relation'; render(); return;
+    }
+
+    if(type==='edit-member'){
+      const id = form.getAttribute('data-id');
+      const updates = {
+        first:data.first.trim(), last:data.last.trim(), gender:data.gender||'',
+        birth_year:data.birthYear?Number(data.birthYear):null, death_year:data.deathYear?Number(data.deathYear):null,
+        bio:data.bio||''
+      };
+      if(data.photo && data.photo.size > 0){
+        const up = await uploadAvatar(id, data.photo);
+        if(up.ok) updates.photo_url = up.url;
+        else { alert('Could not upload photo: ' + up.msg); }
+      }
+      const {data:m, error} = await sb.from('members').update(updates).eq('id', id).select().single();
+      if(error){ alert(error.message); return; }
+      upsertLocal(DB.members, mapMember(m));
+      editingMemberId=null; render(); return;
     }
 
     if(type==='add-relation'){
@@ -1093,12 +1274,35 @@ async function handleAuthUser(sbUser){
       }
     });
 
-    const {data:{session:sbSession}, error:sessErr} = await sb.auth.getSession();
+    // Was this page load actually an OAuth redirect coming back from Google?
+    const hadOAuthParams = /[#?].*(access_token=|code=)/.test(window.location.href);
+
+    let {data:{session:sbSession}, error:sessErr} = await sb.auth.getSession();
     if(sessErr) throw sessErr;
+
+    // Fallback: some supabase-js versions need an explicit exchange for the PKCE `code` param.
+    // Harmless to attempt even if the library already handled it — we just ignore a failure here.
+    if(!sbSession && hadOAuthParams && sb.auth.exchangeCodeForSession){
+      try{
+        const exchanged = await sb.auth.exchangeCodeForSession(window.location.href);
+        if(exchanged && exchanged.data && exchanged.data.session) sbSession = exchanged.data.session;
+      }catch(e){ /* ignore — likely already consumed by the library's automatic handling */ }
+    }
+
+    // Clean the OAuth params out of the address bar so a refresh can't reuse a spent code.
+    if(hadOAuthParams){
+      history.replaceState(null, '', window.location.pathname + window.location.search.replace(/([?&])(code|error|error_code|error_description)=[^&]*&?/g,'$1').replace(/[?&]$/,''));
+    }
+
     if(sbSession){
       await handleAuthUser(sbSession.user);
     } else {
       await loadAll();
+      if(hadOAuthParams){
+        // We came back from Google, but no session ever materialized — surface this clearly
+        // instead of silently landing on the plain login screen.
+        authError = "Signed in with Google, but couldn't establish a session. This usually means Supabase's Site URL / Redirect URLs (Authentication → URL Configuration) don't exactly match this page's address, or the browser is blocking cookies/storage for this site. Try again, and check those settings if it persists.";
+      }
     }
     loaded = true;
     render();
