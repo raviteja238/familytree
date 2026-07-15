@@ -74,6 +74,8 @@ label{font-size:0.82rem; font-weight:600; letter-spacing:.02em; color:var(--pine
 .sidebar-foot{padding:14px 22px 0; border-top:1px solid rgba(255,255,255,0.12); margin-top:10px;}
 .who{font-size:0.85rem; margin-bottom:8px; opacity:.9;}
 .who b{display:block; font-family:var(--font-display); font-size:1rem;}
+.family-badge{background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); border-radius:8px; padding:8px 10px; margin-top:8px;}
+.family-code{font-family:var(--font-mono); background:rgba(255,255,255,0.12); color:#F6F1E4; padding:2px 8px; border-radius:5px; letter-spacing:.05em; font-size:0.85rem;}
 main{flex:1; padding:38px 44px; min-width:0;}
 .card{background:var(--paper-card); border-radius:6px; padding:30px 34px; box-shadow:0 1px 0 rgba(0,0,0,0.03), 0 10px 26px -18px rgba(27,50,32,0.35); border:1px solid rgba(0,0,0,0.04);}
 .eyebrow{font-family:var(--font-mono); font-size:0.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); margin-bottom:6px;}
@@ -208,23 +210,30 @@ function usernameToEmail(u){
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function mapMember(r){ return { id:r.id, first:r.first, last:r.last, gender:r.gender||'', birthYear:r.birth_year, deathYear:r.death_year, bio:r.bio||'', addedBy:r.added_by, photoUrl:r.photo_url||null }; }
+function mapMember(r){ return { id:r.id, first:r.first, last:r.last, gender:r.gender||'', birthYear:r.birth_year, deathYear:r.death_year, bio:r.bio||'', addedBy:r.added_by, photoUrl:r.photo_url||null, familyId:r.family_id, isClaimed:!!r.is_claimed }; }
 function mapRelation(r){ return { id:r.id, aId:r.a_id, bId:r.b_id, type:r.type, status:r.status, requestedBy:r.requested_by, approverUserId:r.approver_user_id, createdAt:new Date(r.created_at).getTime() }; }
 function mapChat(r){ return { id:r.id, conversationId:r.conversation_id, userId:r.user_id, username:r.username, text:r.text, ts:new Date(r.created_at).getTime() }; }
-function mapProfile(r){ return { id:r.id, username:r.username, memberId:r.member_id }; }
-function mapConversation(r){ return { id:r.id, type:r.type, name:r.name, isDefault:r.is_default, createdBy:r.created_by, createdAt:new Date(r.created_at).getTime() }; }
+function mapProfile(r){ return { id:r.id, username:r.username, memberId:r.member_id, familyId:r.family_id }; }
+function mapConversation(r){ return { id:r.id, type:r.type, name:r.name, isDefault:r.is_default, createdBy:r.created_by, familyId:r.family_id, createdAt:new Date(r.created_at).getTime() }; }
+function mapFamily(r){ return { id:r.id, name:r.name, code:r.code }; }
 function mapConvMember(r){ return { conversationId:r.conversation_id, userId:r.user_id }; }
 function upsertLocal(arr, item){ const i = arr.findIndex(x=>x.id===item.id); if(i>-1) arr[i]=item; else arr.push(item); }
 
 /* ============================= APP STATE ============================= */
-let DB = { users:[], members:[], relations:[], chat:[], conversations:[], conversationMembers:[] };
+let DB = { users:[], members:[], relations:[], chat:[], conversations:[], conversationMembers:[], families:[] };
 let loaded = false;
 let session = { user:null, authUser:null };
 let view = 'tree';
 let authTab = 'login';
 let authError = '';
 let regMode = 'new';
+let regFamilyMode = 'code';
+let regFamilyLookup = null;
+let regUnclaimedMembers = [];
 let googleRegMode = 'new';
+let googleFamilyMode = 'code';
+let googleFamilyLookup = null;
+let googleUnclaimedMembers = [];
 let searchQuery = '';
 let ancestorFor = '';
 let addRelationDefaults = null;
@@ -291,7 +300,7 @@ function canEditMember(m){
 }
 function canDeleteMember(m){
   if(!session.user || !m) return false;
-  return m.addedBy===session.user.id && !getUserByMember(m.id);
+  return m.addedBy===session.user.id && !m.isClaimed;
 }
 async function uploadAvatar(memberId, file){
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
@@ -341,22 +350,61 @@ function findExistingDirect(otherUserId){
     return members.length===2 && members.includes(session.user.id) && members.includes(otherUserId);
   });
 }
+function newUuid(){
+  if(crypto.randomUUID) return crypto.randomUUID();
+  // fallback RFC4122 v4-ish generator for browsers/contexts without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+    const r = Math.random()*16|0, v = c==='x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
 async function createConversation(type, name, memberUserIds){
-  const {data:conv, error} = await sb.from('conversations').insert({ type, name: type==='group' ? name : null, created_by: session.user.id }).select().single();
+  const newId = newUuid();
+  const { error } = await sb.from('conversations').insert({ id:newId, type, name: type==='group' ? name : null, created_by: session.user.id, family_id: session.user.familyId });
   if(error) return {ok:false, msg:error.message};
   const participantIds = [...new Set([session.user.id, ...memberUserIds])];
-  const rows = participantIds.map(uid=>({ conversation_id:conv.id, user_id:uid }));
+  const rows = participantIds.map(uid=>({ conversation_id:newId, user_id:uid }));
   const {error:merr} = await sb.from('conversation_members').insert(rows);
   if(merr) return {ok:false, msg:merr.message};
-  upsertLocal(DB.conversations, mapConversation(conv));
-  participantIds.forEach(uid=>{ if(!DB.conversationMembers.some(cm=>cm.conversationId===conv.id && cm.userId===uid)) DB.conversationMembers.push({conversationId:conv.id, userId:uid}); });
-  return {ok:true, id:conv.id};
+  const conv = { id:newId, type, name: type==='group' ? name : null, isDefault:false, createdBy:session.user.id, familyId:session.user.familyId, createdAt:Date.now() };
+  upsertLocal(DB.conversations, conv);
+  participantIds.forEach(uid=>{ if(!DB.conversationMembers.some(cm=>cm.conversationId===newId && cm.userId===uid)) DB.conversationMembers.push({conversationId:newId, userId:uid}); });
+  return {ok:true, id:newId};
 }
-async function joinDefaultConversation(userId){
-  const fam = DB.conversations.find(c=>c.isDefault);
+async function ensureDefaultConversation(familyId){
+  let fam = DB.conversations.find(c=>c.isDefault && c.familyId===familyId);
+  if(fam) return fam;
+  const newId = newUuid();
+  const { error } = await sb.from('conversations').insert({ id:newId, type:'group', name:'Whole Family', is_default:true, family_id:familyId });
+  if(error) return null;
+  fam = { id:newId, type:'group', name:'Whole Family', isDefault:true, createdBy:null, familyId, createdAt:Date.now() };
+  upsertLocal(DB.conversations, fam);
+  return fam;
+}
+async function joinDefaultConversation(userId, familyId){
+  const fam = await ensureDefaultConversation(familyId);
   if(!fam) return;
   const {error} = await sb.from('conversation_members').insert({ conversation_id:fam.id, user_id:userId });
   if(!error) DB.conversationMembers.push({conversationId:fam.id, userId});
+}
+async function createFamily(name, createdBy){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for(let attempt=0; attempt<5; attempt++){
+    let code=''; for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+    const newId = newUuid();
+    const { error } = await sb.from('families').insert({ id:newId, name, code, created_by:createdBy });
+    if(!error) return {ok:true, family:{id:newId, name, code}};
+    if(error.code !== '23505') return {ok:false, msg:error.message};
+  }
+  return {ok:false, msg:'Could not generate a unique family code — please try again.'};
+}
+async function resolveFamily(mode, lookup, familyName, authUserId){
+  if(mode==='new'){
+    if(!familyName || !familyName.trim()) return {ok:false, msg:'Please name your family tree.'};
+    return await createFamily(familyName.trim(), authUserId);
+  }
+  if(!lookup) return {ok:false, msg:'Look up a family code first.'};
+  return {ok:true, family:lookup};
 }
 
 /* ============================= PDF EXPORT ============================= */
@@ -461,7 +509,14 @@ function shellHTML(innerHTML){
       </div>
       <div class="sidebar-foot">
         <div class="who">Signed in as<b>${esc(fullName(getMember(session.user.memberId)))}</b></div>
-        <button class="btn btn-outline btn-sm" data-action="logout" style="width:100%;">Log out</button>
+        ${(()=>{ const fam = DB.families.find(f=>f.id===session.user.familyId); return fam ? `<div class="family-badge">
+          <div class="hint" style="margin:0 0 3px;">${esc(fam.name)}</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <code class="family-code">${esc(fam.code)}</code>
+            <button class="btn btn-outline btn-sm" data-action="copy-family-code" data-code="${esc(fam.code)}" title="Copy invite code" style="padding:3px 8px;">Copy</button>
+          </div>
+        </div>` : ''; })()}
+        <button class="btn btn-outline btn-sm" data-action="logout" style="width:100%; margin-top:10px;">Log out</button>
       </div>
     </aside>
     <main><div class="container">${innerHTML}</div></main>
@@ -480,7 +535,6 @@ function googleBtnHTML(){
 }
 function renderAuth(){
   if(authTab==='complete-profile') { renderCompleteProfile(); return; }
-  const unclaimed = DB.members.filter(m => !getUserByMember(m.id));
   const configWarning = !CONFIGURED ? `<div class="err-msg">This copy isn't connected to a Supabase project yet — open the file and fill in SUPABASE_URL / SUPABASE_ANON_KEY at the top of the &lt;script&gt;. See SETUP.md.</div>` : '';
   const html = `
   <div class="auth-wrap"><div class="auth-card">
@@ -493,14 +547,14 @@ function renderAuth(){
       </svg>
       <h1 style="font-size:1.5rem;">Rootline</h1>
     </div>
-    <p class="hint" style="margin-bottom:20px;">A shared ledger where your family records its branches, chats, and asks each other to confirm how you're related.</p>
+    <p class="hint" style="margin-bottom:20px;">Every family gets its own private tree, chat, and member list — separate from every other family using Rootline.</p>
     ${configWarning}
     ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
     ${googleBtnHTML()}
     <div class="or-divider"><span>or</span></div>
     <div class="auth-tabs">
       <button class="auth-tab ${authTab==='login'?'active':''}" data-authtab="login">Log in</button>
-      <button class="auth-tab ${authTab==='register'?'active':''}" data-authtab="register">Join the family</button>
+      <button class="auth-tab ${authTab==='register'?'active':''}" data-authtab="register">Join or start a family</button>
     </div>
     ${authTab==='login' ? `
       <form data-form="login">
@@ -511,23 +565,51 @@ function renderAuth(){
       <form data-form="register">
         <div class="field"><label>Choose a username</label><input name="username" required placeholder="e.g. raviteja"/><div class="hint">A simple name, not your email address — letters, numbers, dots, dashes.</div></div>
         <div class="field"><label>Choose a password</label><input name="password" type="password" required minlength="6"/></div>
+
         <div class="radio-group">
-          <label class="radio-opt"><input type="radio" name="regmode" value="new" ${regMode==='new'?'checked':''} data-regmode/> Create my profile</label>
-          <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${regMode==='claim'?'checked':''} data-regmode ${unclaimed.length===0?'disabled':''}/> Claim an existing profile</label>
+          <label class="radio-opt"><input type="radio" name="famMode" value="code" ${regFamilyMode==='code'?'checked':''} data-regfammode/> I have a family code</label>
+          <label class="radio-opt"><input type="radio" name="famMode" value="new" ${regFamilyMode==='new'?'checked':''} data-regfammode/> Start a brand-new family tree</label>
         </div>
-        ${regMode==='new' ? `
+
+        ${regFamilyMode==='code' ? `
+          ${!regFamilyLookup ? `
+            <div class="field">
+              <label>Family code</label>
+              <div style="display:flex; gap:8px;">
+                <input id="family-code-input" placeholder="e.g. K7QX2M" style="text-transform:uppercase;" maxlength="8"/>
+                <button type="button" class="btn btn-outline btn-sm" data-action="lookup-family-code">Find</button>
+              </div>
+              <div class="hint">Ask a relative already on Rootline for their family's invite code (shown in their sidebar).</div>
+            </div>
+          ` : `
+            <div class="ok-msg">Joining <b>${esc(regFamilyLookup.name)}</b>. <button type="button" class="btn btn-outline btn-sm" data-action="clear-family-lookup" style="margin-left:8px;">Not this family?</button></div>
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="regmode" value="new" ${regMode==='new'?'checked':''} data-regmode/> Create my profile</label>
+              <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${regMode==='claim'?'checked':''} data-regmode ${regUnclaimedMembers.length===0?'disabled':''}/> Claim an existing profile</label>
+            </div>
+            ${regMode==='new' ? `
+              <div class="row">
+                <div class="col field"><label>First name</label><input name="first" required/></div>
+                <div class="col field"><label>Last name</label><input name="last" required/></div>
+              </div>
+              <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
+            ` : `
+              <div class="field"><label>Which profile is you?</label>
+                <select name="claimId" required>
+                  ${regUnclaimedMembers.length ? regUnclaimedMembers.map(m=>`<option value="${m.id}">${esc(m.first+' '+m.last)}${m.birthYear?(' ('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles in this family</option>'}
+                </select>
+              </div>`}
+            <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create account</button>
+          `}
+        ` : `
+          <div class="field"><label>Name your family tree</label><input name="familyName" required placeholder="e.g. The Cherukuri Family"/></div>
           <div class="row">
             <div class="col field"><label>First name</label><input name="first" required/></div>
             <div class="col field"><label>Last name</label><input name="last" required/></div>
           </div>
           <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
-        ` : `
-          <div class="field"><label>Which profile is you?</label>
-            <select name="claimId" required>
-              ${unclaimed.length ? unclaimed.map(m=>`<option value="${m.id}">${esc(fullName(m))} ${m.birthYear?('('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles yet</option>'}
-            </select>
-          </div>`}
-        <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create account</button>
+          <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create my family tree</button>
+        `}
       </form>`}
     <p class="hint" style="margin-top:16px;">Your username becomes a private login address behind the scenes — you never need to see or share it as an email.</p>
   </div></div>`;
@@ -540,31 +622,58 @@ function renderCompleteProfile(){
   const gName = (gUser && gUser.user_metadata && (gUser.user_metadata.full_name || gUser.user_metadata.name)) || '';
   const [gFirst='', gLast=''] = gName.split(' ');
   const suggestedUsername = (gUser && gUser.email ? gUser.email.split('@')[0] : 'member').replace(/[^a-zA-Z0-9._-]/g,'');
-  const unclaimed = DB.members.filter(m => !getUserByMember(m.id));
   const html = `
   <div class="auth-wrap"><div class="auth-card">
     <h1 style="font-size:1.4rem;">Almost there</h1>
-    <p class="hint" style="margin-bottom:18px;">You're signed in with Google as <b>${esc(gUser && gUser.email || '')}</b>. Let's connect that to your place in the family tree.</p>
+    <p class="hint" style="margin-bottom:18px;">You're signed in with Google as <b>${esc(gUser && gUser.email || '')}</b>. Every family gets its own separate tree — let's set up or join yours.</p>
     ${authError ? `<div class="err-msg">${esc(authError)}</div>` : ''}
     <form data-form="complete-profile">
       <div class="field"><label>Choose a username</label><input name="username" required value="${esc(suggestedUsername)}"/><div class="hint">Shown to the family instead of your email.</div></div>
+
       <div class="radio-group">
-        <label class="radio-opt"><input type="radio" name="regmode" value="new" ${googleRegMode==='new'?'checked':''} data-googleregmode/> Create my profile</label>
-        <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${googleRegMode==='claim'?'checked':''} data-googleregmode ${unclaimed.length===0?'disabled':''}/> Claim an existing profile</label>
+        <label class="radio-opt"><input type="radio" name="famMode" value="code" ${googleFamilyMode==='code'?'checked':''} data-googlefammode/> I have a family code</label>
+        <label class="radio-opt"><input type="radio" name="famMode" value="new" ${googleFamilyMode==='new'?'checked':''} data-googlefammode/> Start a brand-new family tree</label>
       </div>
-      ${googleRegMode==='new' ? `
+
+      ${googleFamilyMode==='code' ? `
+        ${!googleFamilyLookup ? `
+          <div class="field">
+            <label>Family code</label>
+            <div style="display:flex; gap:8px;">
+              <input id="google-family-code-input" placeholder="e.g. K7QX2M" style="text-transform:uppercase;" maxlength="8"/>
+              <button type="button" class="btn btn-outline btn-sm" data-action="google-lookup-family-code">Find</button>
+            </div>
+            <div class="hint">Ask a relative already on Rootline for their family's invite code.</div>
+          </div>
+        ` : `
+          <div class="ok-msg">Joining <b>${esc(googleFamilyLookup.name)}</b>. <button type="button" class="btn btn-outline btn-sm" data-action="google-clear-family-lookup" style="margin-left:8px;">Not this family?</button></div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="regmode" value="new" ${googleRegMode==='new'?'checked':''} data-googleregmode/> Create my profile</label>
+            <label class="radio-opt"><input type="radio" name="regmode" value="claim" ${googleRegMode==='claim'?'checked':''} data-googleregmode ${googleUnclaimedMembers.length===0?'disabled':''}/> Claim an existing profile</label>
+          </div>
+          ${googleRegMode==='new' ? `
+            <div class="row">
+              <div class="col field"><label>First name</label><input name="first" required value="${esc(gFirst)}"/></div>
+              <div class="col field"><label>Last name</label><input name="last" required value="${esc(gLast)}"/></div>
+            </div>
+            <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
+          ` : `
+            <div class="field"><label>Which profile is you?</label>
+              <select name="claimId" required>
+                ${googleUnclaimedMembers.length ? googleUnclaimedMembers.map(m=>`<option value="${m.id}">${esc(m.first+' '+m.last)}${m.birthYear?(' ('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles in this family</option>'}
+              </select>
+            </div>`}
+          <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Finish setting up</button>
+        `}
+      ` : `
+        <div class="field"><label>Name your family tree</label><input name="familyName" required placeholder="e.g. The Cherukuri Family"/></div>
         <div class="row">
           <div class="col field"><label>First name</label><input name="first" required value="${esc(gFirst)}"/></div>
           <div class="col field"><label>Last name</label><input name="last" required value="${esc(gLast)}"/></div>
         </div>
         <div class="field"><label>Birth year (optional)</label><input name="birthYear" type="number" min="1600" max="2100"/></div>
-      ` : `
-        <div class="field"><label>Which profile is you?</label>
-          <select name="claimId" required>
-            ${unclaimed.length ? unclaimed.map(m=>`<option value="${m.id}">${esc(fullName(m))} ${m.birthYear?('('+m.birthYear+')'):''}</option>`).join('') : '<option value="">No unclaimed profiles yet</option>'}
-          </select>
-        </div>`}
-      <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Finish setting up</button>
+        <button class="btn btn-primary" style="width:100%; margin-top:6px;" type="submit">Create my family tree</button>
+      `}
     </form>
     <button class="btn btn-outline btn-sm" data-action="cancel-google" style="width:100%; margin-top:12px;">Use a different account</button>
   </div></div>`;
@@ -964,13 +1073,14 @@ function render(){
 
 /* ============================= DATA LOADING & REALTIME ============================= */
 async function loadAll(){
-  const [mRes, rRes, cRes, pRes, convRes, convMemRes] = await Promise.all([
+  const [mRes, rRes, cRes, pRes, convRes, convMemRes, famRes] = await Promise.all([
     sb.from('members').select('*'),
     sb.from('relations').select('*'),
     sb.from('chat_messages').select('*').order('created_at',{ascending:true}),
     sb.from('profiles').select('*'),
     sb.from('conversations').select('*'),
     sb.from('conversation_members').select('*'),
+    sb.from('families').select('*'),
   ]);
   DB.members = (mRes.data||[]).map(mapMember);
   DB.relations = (rRes.data||[]).map(mapRelation);
@@ -978,6 +1088,7 @@ async function loadAll(){
   DB.users = (pRes.data||[]).map(mapProfile);
   DB.conversations = (convRes.data||[]).map(mapConversation);
   DB.conversationMembers = (convMemRes.data||[]).map(mapConvMember);
+  DB.families = (famRes.data||[]).map(mapFamily);
 }
 function setupRealtime(){
   if(realtimeChannel) return;
@@ -1026,13 +1137,39 @@ document.addEventListener('click', async (e)=>{
   const action = e.target.closest('[data-action]');
   if(action){
     const act = action.getAttribute('data-action');
-    if(act==='logout'){ await sb.auth.signOut(); session.user=null; session.authUser=null; view='tree'; authTab='login'; render(); return; }
+    if(act==='logout'){
+      await sb.auth.signOut(); session.user=null; session.authUser=null; view='tree'; authTab='login';
+      regFamilyMode='code'; regFamilyLookup=null; regUnclaimedMembers=[]; regMode='new';
+      googleFamilyMode='code'; googleFamilyLookup=null; googleUnclaimedMembers=[]; googleRegMode='new';
+      render(); return;
+    }
     if(act==='google-login'){
       const {error} = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.href.split('#')[0].split('?')[0] } });
       if(error){ authError = error.message; render(); }
       return; // browser is being redirected to Google
     }
-    if(act==='cancel-google'){ await sb.auth.signOut(); session.authUser=null; authTab='login'; render(); return; }
+    if(act==='cancel-google'){
+      await sb.auth.signOut(); session.authUser=null; authTab='login';
+      googleFamilyMode='code'; googleFamilyLookup=null; googleUnclaimedMembers=[]; googleRegMode='new';
+      render(); return;
+    }
+    if(act==='lookup-family-code' || act==='google-lookup-family-code'){
+      const isGoogle = act==='google-lookup-family-code';
+      const inputEl = document.getElementById(isGoogle ? 'google-family-code-input' : 'family-code-input');
+      const code = inputEl ? inputEl.value.trim() : '';
+      if(!code){ authError='Enter a family code first.'; render(); return; }
+      const {data, error} = await sb.rpc('lookup_family_by_code', { p_code: code });
+      if(error || !data || data.length===0){ authError='No family found with that code. Double-check it with whoever shared it.'; render(); return; }
+      const fam = data[0];
+      const {data:unclaimedData} = await sb.rpc('get_unclaimed_members_for_family', { p_family_id: fam.id });
+      const unclaimed = (unclaimedData||[]).map(m=>({id:m.id, first:m.first, last:m.last, birthYear:m.birth_year}));
+      authError='';
+      if(isGoogle){ googleFamilyLookup = {id:fam.id, name:fam.name}; googleUnclaimedMembers = unclaimed; }
+      else { regFamilyLookup = {id:fam.id, name:fam.name}; regUnclaimedMembers = unclaimed; }
+      render(); return;
+    }
+    if(act==='clear-family-lookup'){ regFamilyLookup=null; regUnclaimedMembers=[]; regMode='new'; render(); return; }
+    if(act==='google-clear-family-lookup'){ googleFamilyLookup=null; googleUnclaimedMembers=[]; googleRegMode='new'; render(); return; }
     if(act==='accept-rel' || act==='decline-rel'){
       const id = action.getAttribute('data-id');
       const newStatus = act==='accept-rel' ? 'accepted' : 'declined';
@@ -1080,11 +1217,19 @@ document.addEventListener('click', async (e)=>{
     if(act==='zoom-in'){ treeZoom = Math.min(2, +(treeZoom+0.15).toFixed(2)); render(); return; }
     if(act==='zoom-out'){ treeZoom = Math.max(0.4, +(treeZoom-0.15).toFixed(2)); render(); return; }
     if(act==='zoom-reset'){ treeZoom = 1; render(); return; }
+    if(act==='copy-family-code'){
+      const code = action.getAttribute('data-code');
+      try{ await navigator.clipboard.writeText(code); action.textContent='Copied!'; setTimeout(()=>{ action.textContent='Copy'; }, 1500); }
+      catch(e){ alert('Family code: ' + code); }
+      return;
+    }
   }
 });
 document.addEventListener('change', (e)=>{
   if(e.target.matches('[data-regmode]')){ regMode = e.target.value; render(); return; }
   if(e.target.matches('[data-googleregmode]')){ googleRegMode = e.target.value; render(); return; }
+  if(e.target.matches('[data-regfammode]')){ regFamilyMode = e.target.value; regFamilyLookup=null; regUnclaimedMembers=[]; render(); return; }
+  if(e.target.matches('[data-googlefammode]')){ googleFamilyMode = e.target.value; googleFamilyLookup=null; googleUnclaimedMembers=[]; render(); return; }
   if(e.target.matches('[data-change="ancestor-select"]')){ ancestorFor = e.target.value; render(); return; }
   if(e.target.matches('[data-convotype]')){ newConvoType = e.target.value; render(); return; }
 });
@@ -1119,24 +1264,33 @@ document.addEventListener('submit', async (e)=>{
       if(!signUpData.user){ authError = 'Check your email to confirm the account, then log in.'; render(); return; }
       const authUserId = signUpData.user.id;
 
-      let memberId;
+      const famRes = await resolveFamily(regFamilyMode, regFamilyLookup, data.familyName, authUserId);
+      if(!famRes.ok){ authError = famRes.msg; render(); return; }
+      const familyId = famRes.family.id;
+
+      let memberId, needsClaimUpdate=false;
       if(regMode==='claim'){
         if(!data.claimId){ authError='Choose a profile to claim.'; render(); return; }
-        memberId = data.claimId;
+        memberId = data.claimId; needsClaimUpdate = true;
       } else {
         if(!data.first || !data.last){ authError='Please provide a first and last name.'; render(); return; }
-        const {data:m, error:merr} = await sb.from('members').insert({
-          first:data.first.trim(), last:data.last.trim(), birth_year:data.birthYear?Number(data.birthYear):null, added_by:authUserId
-        }).select().single();
+        memberId = newUuid();
+        const { error:merr } = await sb.from('members').insert({
+          id:memberId, first:data.first.trim(), last:data.last.trim(),
+          birth_year:data.birthYear?Number(data.birthYear):null, added_by:authUserId, family_id:familyId, is_claimed:true
+        });
         if(merr){ authError = merr.message; render(); return; }
-        upsertLocal(DB.members, mapMember(m));
-        memberId = m.id;
       }
-      const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
+
+      const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId, family_id:familyId }).select().single();
       if(perr){ authError = perr.message; render(); return; }
-      upsertLocal(DB.users, mapProfile(p));
-      await joinDefaultConversation(authUserId);
-      session.user = mapProfile(p); authError=''; view='tree'; regMode='new'; setupRealtime(); render(); return;
+      if(needsClaimUpdate){ await sb.from('members').update({ is_claimed:true }).eq('id', memberId); }
+
+      await joinDefaultConversation(authUserId, familyId);
+      await loadAll();
+      session.user = mapProfile(p); authError='';
+      view='tree'; regMode='new'; regFamilyMode='code'; regFamilyLookup=null; regUnclaimedMembers=[];
+      setupRealtime(); render(); return;
     }
 
     if(type==='complete-profile'){
@@ -1144,31 +1298,40 @@ document.addEventListener('submit', async (e)=>{
       if(!uname){ authError='Please choose a username.'; render(); return; }
       const authUserId = session.authUser.id;
 
-      let memberId;
+      const famRes = await resolveFamily(googleFamilyMode, googleFamilyLookup, data.familyName, authUserId);
+      if(!famRes.ok){ authError = famRes.msg; render(); return; }
+      const familyId = famRes.family.id;
+
+      let memberId, needsClaimUpdate=false;
       if(googleRegMode==='claim'){
         if(!data.claimId){ authError='Choose a profile to claim.'; render(); return; }
-        memberId = data.claimId;
+        memberId = data.claimId; needsClaimUpdate = true;
       } else {
         if(!data.first || !data.last){ authError='Please provide a first and last name.'; render(); return; }
-        const {data:m, error:merr} = await sb.from('members').insert({
-          first:data.first.trim(), last:data.last.trim(), birth_year:data.birthYear?Number(data.birthYear):null, added_by:authUserId
-        }).select().single();
+        memberId = newUuid();
+        const { error:merr } = await sb.from('members').insert({
+          id:memberId, first:data.first.trim(), last:data.last.trim(),
+          birth_year:data.birthYear?Number(data.birthYear):null, added_by:authUserId, family_id:familyId, is_claimed:true
+        });
         if(merr){ authError = merr.message; render(); return; }
-        upsertLocal(DB.members, mapMember(m));
-        memberId = m.id;
       }
-      const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId }).select().single();
+
+      const {data:p, error:perr} = await sb.from('profiles').insert({ id:authUserId, username:uname, member_id:memberId, family_id:familyId }).select().single();
       if(perr){ authError = perr.message; render(); return; }
-      upsertLocal(DB.users, mapProfile(p));
-      await joinDefaultConversation(authUserId);
-      session.user = mapProfile(p); session.authUser=null; authError=''; view='tree'; googleRegMode='new'; setupRealtime(); render(); return;
+      if(needsClaimUpdate){ await sb.from('members').update({ is_claimed:true }).eq('id', memberId); }
+
+      await joinDefaultConversation(authUserId, familyId);
+      await loadAll();
+      session.user = mapProfile(p); session.authUser=null; authError='';
+      view='tree'; googleRegMode='new'; googleFamilyMode='code'; googleFamilyLookup=null; googleUnclaimedMembers=[];
+      setupRealtime(); render(); return;
     }
 
     if(type==='add-member'){
       const {data:m, error} = await sb.from('members').insert({
         first:data.first.trim(), last:data.last.trim(), gender:data.gender||'',
         birth_year:data.birthYear?Number(data.birthYear):null, death_year:data.deathYear?Number(data.deathYear):null,
-        bio:data.bio||'', added_by:session.user.id
+        bio:data.bio||'', added_by:session.user.id, family_id:session.user.familyId
       }).select().single();
       if(error){ alert(error.message); return; }
       let finalMember = m;
